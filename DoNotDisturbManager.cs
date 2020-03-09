@@ -94,14 +94,10 @@ namespace Do_Not_Disturb
 		{
 			foreach (Region region in room.Regions)
 			{
-				foreach (Region doorRegion in region.Neighbors.Where(r => (r.door != null)))
+				foreach (Region doorRegion in region.Neighbors)
 				{
-					Building_Door door = doorRegion.door;
-
-					if (door != null)
-					{
-						door.SetForbidden(forbidDoors, false);
-					}
+					// Lock or unlock doors in neighbouring regions
+					doorRegion.door?.SetForbidden(forbidDoors, false);
 				}
 			}
 		}
@@ -131,14 +127,10 @@ namespace Do_Not_Disturb
 
 						Room room = pawn.GetRoom();
 
-						if (room == null || room.Owners.Count() == 0)
+						if (room != null && room.Owners.Count() > 0)
 						{
-							// Pawn is a not a room or it has no owners
-
-							continue;
+							this.RefreshRoomState(room, pawn);
 						}
-
-						this.RefreshRoomState(room, pawn);
 					}
 
 					foreach (KeyValuePair<Room, LockState> keyPair in this.RoomState)

@@ -3,7 +3,7 @@ using Verse;
 
 namespace Do_Not_Disturb
 {
-	class Settings : ModSettings
+	public class Settings : ModSettings
 	{
 		public static bool KeepUnlockedForUrgentTending = true;
 
