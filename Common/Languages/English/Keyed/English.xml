@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<LanguageData>
+
+	<!-- When to keep rooms LOCKED -->
+	
+	<DND_UnlockOptionsGeneral>Keep rooms unlocked when:</DND_UnlockOptionsGeneral>
+	
+	<DND_KeepUnlockedForUrgentTending>	• Pawns require urgent treatment</DND_KeepUnlockedForUrgentTending>
+	<DND_KeepUnlockedForUrgentTending_Tooltip>When a colonist requires urgent medical care, their room will remain unlocked</DND_KeepUnlockedForUrgentTending_Tooltip>
+
+	<DND_KeepUnlockedForSurgery>	• Pawns have pending surgeries</DND_KeepUnlockedForSurgery>
+	<DND_KeepUnlockedForSurgery_Tooltip>When a colonist has pending surgery bills, their room will remain unlocked</DND_KeepUnlockedForSurgery_Tooltip>
+
+	<DND_KeepUnlockedForAnyTending>	• Pawns require any treatment</DND_KeepUnlockedForAnyTending>
+	<DND_KeepUnlockedForAnyTending_Tooltip>When a colonist has any tendable health issues, their room will remain unlocked</DND_KeepUnlockedForAnyTending_Tooltip>
+
+	<!-- When to keep rooms UNLOCKED -->
+
+	<DND_LockOptionsGeneral>Lock rooms when:</DND_LockOptionsGeneral>
+	
+	<DND_KeepLockedForSoloRelaxation>	• Pawns are relaxing alone</DND_KeepLockedForSoloRelaxation>
+	<DND_KeepLockedForSoloRelaxation_Tooltip>When a colonist is relaxing for joy purposes, lock their room</DND_KeepLockedForSoloRelaxation_Tooltip>
+
+</LanguageData>

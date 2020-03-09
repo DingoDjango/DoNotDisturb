@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ModMetaData>
+	<name>Do Not Disturb</name>
+	<author>1000101, Dingo</author>
+	<packageId>Dingo.DoNotDisturb</packageId>
+	<description>When pawns wish to remain undisturbed, they will forbid their room doors.
+
+You can configure some aspects of this mod in the Mod Settings menu.
+
+Original mod by E (aka 1000101), adapted for RimWorld v1.1 by Dingo.</description>
+	<url>https://ludeon.com/forums/index.php?topic=26077</url>
+	<supportedVersions>
+		<li>1.1</li>
+	</supportedVersions>
+	<modDependencies>
+		<li>
+			<packageId>brrainz.harmony</packageId>
+			<displayName>Harmony</displayName>
+			<steamWorkshopUrl>steam://url/CommunityFilePage/2009463077</steamWorkshopUrl>
+			<downloadUrl>https://github.com/pardeike/HarmonyRimWorld/releases/latest</downloadUrl>
+		</li>
+	</modDependencies>
+</ModMetaData>
