@@ -2,6 +2,6 @@
 <Manifest>
 	<identifier>Dingo.DoNotDisturb</identifier>
 	<version>1.1.7372.1</version>
-	<manifestUri></manifestUri>
-	<downloadUri></downloadUri>
+	<manifestUri>https://raw.githubusercontent.com/DingoDjango/DoNotDisturb/master/About/Manifest.xml</manifestUri>
+	<downloadUri>https://github.com/DingoDjango/DoNotDisturb/releases/latest</downloadUri>
 </Manifest>

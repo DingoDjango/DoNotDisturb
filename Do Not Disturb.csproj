@@ -84,6 +84,7 @@
   <ItemGroup>
     <Content Include="About\About.xml" />
     <Content Include="About\Manifest.xml" />
+    <Content Include="About\ModSync.xml" />
     <Content Include="Common\Languages\English\Keyed\English.xml" />
   </ItemGroup>
   <ItemGroup>
