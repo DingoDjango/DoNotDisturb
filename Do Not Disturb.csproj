@@ -2,8 +2,6 @@
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{DB45FF7F-A18E-425B-8B71-261AC4EF4B62}</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>Do_Not_Disturb</RootNamespace>
@@ -33,7 +31,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>embedded</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>Assemblies\</OutputPath>
+    <OutputPath>Current\Assemblies\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -43,7 +41,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>none</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>Assemblies\</OutputPath>
+    <OutputPath>Current\Assemblies\</OutputPath>
     <DefineConstants>
     </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
@@ -55,7 +53,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="0Harmony">
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\Harmony\Assemblies\0Harmony.dll</HintPath>
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\Harmony\Current\Assemblies\0Harmony.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Assembly-CSharp">
@@ -85,12 +83,9 @@
     <Content Include="About\About.xml" />
     <Content Include="About\Manifest.xml" />
     <Content Include="About\ModSync.xml" />
-    <Content Include="About\Preview.png" />
-    <Content Include="About\PublishedFileId.txt" />
-    <Content Include="Common\Languages\English\Keyed\English.xml" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Assemblies\" />
+    <Content Include="LoadFolders.xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DoNotDisturbManager.cs" />
@@ -113,20 +108,36 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>mkdir "C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\$(ProjectName)"
+    <PostBuildEvent>SET MODDIR=C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\$(ProjectName)
+SET ZIPFILE=D:\Downloads\$(ProjectName).zip
 
-xcopy "$(ProjectDir)About" "C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\$(ProjectName)\About" /i /e /r /y
-xcopy "$(ProjectDir)Assemblies" "C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\$(ProjectName)\Assemblies" /i /e /r /y
-xcopy "$(ProjectDir)Common" "C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\$(ProjectName)\Common" /i /e /r /y
+mkdir "%25MODDIR%25"
+
+xcopy "$(ProjectDir)1.1" "%25MODDIR%25\1.1" /i /e /r /y
+
+xcopy "$(ProjectDir)About" "%25MODDIR%25\About" /i /e /r /y
+
+xcopy "$(ProjectDir)Current" "%25MODDIR%25\Current" /i /e /r /y
+
+xcopy "$(ProjectDir)LoadFolders.xml" "%25MODDIR%25" /r /y
+
+
+
+7z a -mx9 "%25ZIPFILE%25" "%25MODDIR%25"
 
 cd $(ProjectDir)
+
 del /f /s /q bin
+
 del /f /s /q obj
+
 rmdir /s /q bin
+
 rmdir /s /q obj</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>cd $(OutDir)
+
 del /s /q *</PreBuildEvent>
   </PropertyGroup>
 </Project>
