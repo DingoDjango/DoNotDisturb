@@ -7,11 +7,12 @@
 
 You can configure some aspects of this mod in the Mod Settings menu.
 
-Original mod by E (aka 1000101), adapted for RimWorld v1.1 by Dingo.</description>
+Original mod by E (aka 1000101), updated by Dingo.</description>
 	<url>https://ludeon.com/forums/index.php?topic=26077</url>
 	<supportedVersions>
 		<li>1.1</li>
 		<li>1.2</li>
+		<li>1.5</li>
 	</supportedVersions>
     <modDependencies>
         <li>

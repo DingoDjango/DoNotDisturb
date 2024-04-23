@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <LanguageData>
 
-	<!-- When to keep rooms LOCKED -->
+	<!-- When to keep rooms UNLOCKED -->
 	
 	<DND_UnlockOptionsGeneral>Keep rooms unlocked when:</DND_UnlockOptionsGeneral>
 	
@@ -14,7 +14,7 @@
 	<DND_KeepUnlockedForAnyTending>	• Pawns require any treatment</DND_KeepUnlockedForAnyTending>
 	<DND_KeepUnlockedForAnyTending_Tooltip>When a colonist has any tendable health issues, their room will remain unlocked</DND_KeepUnlockedForAnyTending_Tooltip>
 
-	<!-- When to keep rooms UNLOCKED -->
+	<!-- When to keep rooms LOCKED -->
 
 	<DND_LockOptionsGeneral>Lock rooms when:</DND_LockOptionsGeneral>
 	
