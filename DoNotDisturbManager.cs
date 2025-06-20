@@ -16,8 +16,6 @@ namespace Do_Not_Disturb
 
         private readonly Dictionary<Room, LockState> RoomState = new Dictionary<Room, LockState>();
 
-        private readonly int ticksPerSecond = GenTicks.SecondsToTicks(1f);
-
         private LockState RoomStateForPawn(Room room, Pawn pawn)
         {
             if ((!room.Owners.Contains(pawn)) ||
@@ -92,7 +90,7 @@ namespace Do_Not_Disturb
             }
         }
 
-        //TODO: what about doors to adjacent rooms / hallways?***
+        //TODO: what about doors to adjacent rooms / hallways?
         public void SetRoomDoors(Room room, bool forbidDoors)
         {
             foreach (Region roomRegion in room.Regions)
@@ -108,7 +106,7 @@ namespace Do_Not_Disturb
         public override void MapComponentTick()
         {
             // Triggers once per second (60 ticks)
-            if ((Find.TickManager.TicksGame % this.ticksPerSecond) == 0)
+            if ((Find.TickManager.TicksGame % GenTicks.TicksPerRealSecond) == 0)
             {
                 if (this.RoomState.Count > 0)
                 {
