@@ -65,12 +65,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ChokePointDetector.cs" />
-    <Compile Include="DoNotDisturbManager.cs" />
-    <Compile Include="HarmonyPatches.cs" />
-    <Compile Include="Main.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Settings.cs" />
+    <Compile Include="Source\ChokePointDetector.cs" />
+    <Compile Include="Source\DoNotDisturbManager.cs" />
+    <Compile Include="Source\HarmonyPatches.cs" />
+    <Compile Include="Source\Main.cs" />
+    <Compile Include="Source\Settings.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Do Not Disturb\LoadFolders.xml" />

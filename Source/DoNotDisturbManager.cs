@@ -61,15 +61,24 @@ namespace Do_Not_Disturb
                 return LockState.WantUnlock;
             }
 
-            if (this.IsActuallyResting(pawn) && !this.KeepRoomUnlockedForTending(pawn))
+            if (owners.Contains(pawn))
             {
-                return LockState.WantLock;
-            }
+                if (this.IsActuallyResting(pawn) && !this.KeepRoomUnlockedForTending(pawn))
+                {
+                    return LockState.WantLock;
+                }
 
-            if (Settings.KeepLockedForSoloRelaxation &&
-                pawn.CurJob?.def.driverClass == typeof(JobDriver_RelaxAlone))
-            {
-                return LockState.WantLock;
+                if (Settings.KeepLockedForSoloRelaxation &&
+                    pawn.CurJob?.def.driverClass == typeof(JobDriver_RelaxAlone))
+                {
+                    return LockState.WantLock;
+                }
+
+                if (Settings.KeepLockedForLovin &&
+                    pawn.CurJob?.def == JobDefOf.Lovin)
+                {
+                    return LockState.WantLock;
+                }
             }
 
             return LockState.WantUnlock;

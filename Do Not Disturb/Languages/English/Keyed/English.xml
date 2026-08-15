@@ -31,4 +31,7 @@
 	<DND_KeepLockedForSoloRelaxation>	• Pawns are relaxing alone</DND_KeepLockedForSoloRelaxation>
 	<DND_KeepLockedForSoloRelaxation_Tooltip>When a colonist is relaxing for joy purposes, lock their room</DND_KeepLockedForSoloRelaxation_Tooltip>
 
+	<DND_KeepLockedForLovin>	• Pawns are lovin'</DND_KeepLockedForLovin>
+	<DND_KeepLockedForLovin_Tooltip>When a colonist is doing lovin' in bed, lock their room</DND_KeepLockedForLovin_Tooltip>
+
 </LanguageData>

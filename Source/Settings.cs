@@ -11,6 +11,7 @@ namespace Do_Not_Disturb
 		public static bool KeepUnlockedForAnyTending = true;
 		public static bool KeepUnlockedForResearch = true;
 		public static bool KeepLockedForSoloRelaxation = true;
+		public static bool KeepLockedForLovin = false;
 
 		public static void DoSettingsWindowContents(Rect rect)
 		{
@@ -54,6 +55,10 @@ namespace Do_Not_Disturb
 
 			options.CheckboxLabeled("DND_KeepLockedForSoloRelaxation".Translate(), ref KeepLockedForSoloRelaxation, "DND_KeepLockedForSoloRelaxation_Tooltip".Translate());
 
+			options.Gap(10f);
+
+			options.CheckboxLabeled("DND_KeepLockedForLovin".Translate(), ref KeepLockedForLovin, "DND_KeepLockedForLovin_Tooltip".Translate());
+
 			options.End();
 		}
 
@@ -67,6 +72,7 @@ namespace Do_Not_Disturb
 			Scribe_Values.Look(ref KeepUnlockedForAnyTending, "DND_KeepUnlockedForAnyTending", true);
 			Scribe_Values.Look(ref KeepUnlockedForResearch, "DND_KeepUnlockedForResearch", true);
 			Scribe_Values.Look(ref KeepLockedForSoloRelaxation, "DND_KeepLockedForSoloRelaxation", true);
+			Scribe_Values.Look(ref KeepLockedForLovin, "DND_KeepLockedForLovin", false);
 		}
 	}
 }
