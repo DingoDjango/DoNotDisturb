@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -81,17 +81,17 @@
   <PropertyGroup>
     <PostBuildEvent>cd /d "$(ProjectDir)"
 SET MODDIR=C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\$(ProjectName)
-SET ZIPFILE=..\ZIP\$(ProjectName).zip
+SET ZIPFILE=ZIP\$(ProjectName).zip
 
 if exist "%25MODDIR%25" rmdir /s /q "%25MODDIR%25"
 
-xcopy "$(ProjectDir)Do Not Disturb\*" "%25MODDIR%25" /i /e /r /y >nul
+xcopy "$(ProjectDir)Do Not Disturb\*" "%25MODDIR%25" /i /e /r /y &gt;nul
 
 if "$(Configuration)" == "Debug" (
     if exist "%25ZIPFILE%25" del /f /q "%25ZIPFILE%25"
 ) else (
-    if not exist "..\ZIP" mkdir "..\ZIP"
-    "C:\Program Files\7-Zip\7z.exe" a -mx9 -bso0 -bse2 -bsp0 "%25ZIPFILE%25" "Do Not Disturb\Current\Assemblies"
+    if not exist "ZIP" mkdir "ZIP"
+    "C:\Program Files\7-Zip\7z.exe" a -mx9 -bso0 -bse2 -bsp0 "%25ZIPFILE%25" "Do Not Disturb"
 )</PostBuildEvent>
   </PropertyGroup>
 </Project>
