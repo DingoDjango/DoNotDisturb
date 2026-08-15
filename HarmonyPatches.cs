@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using HarmonyLib;
 using RimWorld;
 using Verse;
@@ -27,21 +28,28 @@ namespace Do_Not_Disturb
 
 		static HarmonyPatches()
 		{
-			Harmony harmony = new Harmony("dingo.donotdisturb");
+			try
+			{
+				Harmony harmony = new Harmony("dingo.donotdisturb");
 
 #if DEBUG
-			Harmony.DEBUG = true;
+				Harmony.DEBUG = true;
 #endif
 
-			MethodInfo pawnDraftSetter = AccessTools.PropertySetter(typeof(Pawn_DraftController), nameof(Pawn_DraftController.Drafted));
+				MethodInfo pawnDraftSetter = AccessTools.PropertySetter(typeof(Pawn_DraftController), nameof(Pawn_DraftController.Drafted));
 
 #if DEBUG
-			Log.Message($"Do Not Disturb :: pawnDraftSetter = {pawnDraftSetter.ToString()}");
+				Log.Message($"Do Not Disturb :: pawnDraftSetter = {pawnDraftSetter.ToString()}");
 #endif
 
-			harmony.Patch(pawnDraftSetter,
-				prefix: null,
-				postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.Pawn_DraftController_Drafted_Postfix)));
+				harmony.Patch(pawnDraftSetter,
+					prefix: null,
+					postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.Pawn_DraftController_Drafted_Postfix)));
+			}
+			catch (Exception ex)
+			{
+				Log.Error($"Do Not Disturb :: Failed to apply Harmony patches: {ex}");
+			}
 		}
 	}
 }
