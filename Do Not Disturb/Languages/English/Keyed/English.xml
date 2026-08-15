@@ -14,6 +14,9 @@
 	<DND_KeepUnlockedForAnyTending>	• Pawns require any treatment</DND_KeepUnlockedForAnyTending>
 	<DND_KeepUnlockedForAnyTending_Tooltip>When a colonist has any tendable health issues, their room will remain unlocked</DND_KeepUnlockedForAnyTending_Tooltip>
 
+	<DND_KeepUnlockedForResearch>	• Pawns are researching</DND_KeepUnlockedForResearch>
+	<DND_KeepUnlockedForResearch_Tooltip>When a colonist is actively researching, their room will remain unlocked so they can continue without interruption</DND_KeepUnlockedForResearch_Tooltip>
+
 	<!-- When to keep rooms LOCKED -->
 
 	<DND_LockOptionsGeneral>Lock rooms when:</DND_LockOptionsGeneral>
