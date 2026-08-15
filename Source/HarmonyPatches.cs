@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Reflection;
 using HarmonyLib;
 using RimWorld;
@@ -11,6 +11,9 @@ namespace Do_Not_Disturb
 	{
 		private static void Room_Notify_RoomShapeChanged_Postfix(Room __instance)
 		{
+#if DEBUG
+			Log.Message($"Do Not Disturb :: Room shape changed → invalidating choke-point cache for {__instance.Role.label} #{__instance.ID}");
+#endif
 			ChokePointDetector.InvalidateCache(__instance);
 		}
 

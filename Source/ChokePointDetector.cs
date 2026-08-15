@@ -12,14 +12,27 @@ namespace Do_Not_Disturb
         }
 
         private static readonly Dictionary<Room, CachedChokePointData> Cache = new Dictionary<Room, CachedChokePointData>();
+#if DEBUG
+        private static int CacheHits = 0;
+        private static int CacheMisses = 0;
+#endif
 
         public static void InvalidateCache(Room room)
         {
+#if DEBUG
+            if (Cache.ContainsKey(room))
+            {
+                Log.Message($"Do Not Disturb :: Choke-point cache invalidated for {room.Role.label} #{room.ID}");
+            }
+#endif
             Cache.Remove(room);
         }
 
         public static void ClearCache()
         {
+#if DEBUG
+            Log.Message($"Do Not Disturb :: Choke-point cache cleared (had {Cache.Count} entries)");
+#endif
             Cache.Clear();
         }
 
@@ -33,8 +46,15 @@ namespace Do_Not_Disturb
             if (Cache.TryGetValue(room, out CachedChokePointData cached) &&
                 Find.TickManager.TicksGame < cached.ValidUntilTick)
             {
+#if DEBUG
+                CacheHits++;
+#endif
                 return cached.IsChokePoint;
             }
+
+#if DEBUG
+            CacheMisses++;
+#endif
 
             bool result = CalculateIsChokePoint(room);
 
@@ -46,6 +66,13 @@ namespace Do_Not_Disturb
 
             return result;
         }
+
+#if DEBUG
+        public static void LogCacheStats()
+        {
+            Log.Message($"Do Not Disturb :: Choke-point cache stats — hits: {CacheHits}, misses: {CacheMisses}, size: {Cache.Count}");
+        }
+#endif
 
         private static bool CalculateIsChokePoint(Room room)
         {
@@ -64,6 +91,9 @@ namespace Do_Not_Disturb
 
             if (adjacentRooms.Count < 2)
             {
+#if DEBUG
+                Log.Message($"Do Not Disturb :: Choke-point check {room.Role.label} #{room.ID}: skipped (only {adjacentRooms.Count} adjacent rooms)");
+#endif
                 return false;
             }
 
@@ -73,6 +103,9 @@ namespace Do_Not_Disturb
 
             if (root == null)
             {
+#if DEBUG
+                Log.Message($"Do Not Disturb :: Choke-point check {room.Role.label} #{room.ID}: skipped (start room has no regions)");
+#endif
                 return false;
             }
 
@@ -95,10 +128,7 @@ namespace Do_Not_Disturb
             bool isChokePoint = reachedCount < roomList.Count - 1;
 
 #if DEBUG
-            if (isChokePoint)
-            {
-                Log.Message($"Do Not Disturb :: Choke-point detected: {room.Role.label} #{room.ID} (adjacent: {adjacentRooms.Count}, reachable: {reachedCount + 1}/{roomList.Count})");
-            }
+            Log.Message($"Do Not Disturb :: Choke-point check {room.Role.label} #{room.ID}: adjacent={adjacentRooms.Count}, reachable={reachedCount + 1}/{roomList.Count}, isChokePoint={isChokePoint}");
 #endif
 
             return isChokePoint;

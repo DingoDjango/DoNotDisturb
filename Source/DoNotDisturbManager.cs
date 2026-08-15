@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using RimWorld;
 using Verse;
@@ -40,6 +40,9 @@ namespace Do_Not_Disturb
                 (pawn.needs.food.CurCategory >= HungerCategory.UrgentlyHungry) ||
                 (pawn.needs.joy.CurCategory <= JoyCategory.Low))
             {
+#if DEBUG
+                Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} → WantUnlock (pawn={pawn.LabelShort}, not owner/hungry/low joy)");
+#endif
                 return LockState.WantUnlock;
             }
 
@@ -47,17 +50,26 @@ namespace Do_Not_Disturb
             {
                 if (owner.GetRoom() != room)
                 {
+#if DEBUG
+                    Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} → WantUnlock (co-owner {owner.LabelShort} left)");
+#endif
                     return LockState.WantUnlock;
                 }
             }
 
             if (pawn.GetRoom() != room)
             {
+#if DEBUG
+                Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} → WantUnlock (pawn not in room)");
+#endif
                 return LockState.WantUnlock;
             }
 
             if (Settings.KeepUnlockedForResearch && pawn.CurJob?.def == JobDefOf.Research)
             {
+#if DEBUG
+                Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} → WantUnlock (researching)");
+#endif
                 return LockState.WantUnlock;
             }
 
@@ -65,18 +77,27 @@ namespace Do_Not_Disturb
             {
                 if (this.IsActuallyResting(pawn) && !this.KeepRoomUnlockedForTending(pawn))
                 {
+#if DEBUG
+                    Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} → WantLock (resting, pawn={pawn.LabelShort})");
+#endif
                     return LockState.WantLock;
                 }
 
                 if (Settings.KeepLockedForSoloRelaxation &&
                     pawn.CurJob?.def.driverClass == typeof(JobDriver_RelaxAlone))
                 {
+#if DEBUG
+                    Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} → WantLock (solo relaxation, pawn={pawn.LabelShort})");
+#endif
                     return LockState.WantLock;
                 }
 
                 if (Settings.KeepLockedForLovin &&
                     pawn.CurJob?.def == JobDefOf.Lovin)
                 {
+#if DEBUG
+                    Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} → WantLock (lovin', pawn={pawn.LabelShort})");
+#endif
                     return LockState.WantLock;
                 }
             }
@@ -167,6 +188,9 @@ namespace Do_Not_Disturb
                     doorRegion.door?.SetForbidden(forbidDoors, false);
                 }
             }
+#if DEBUG
+            Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} doors → {(forbidDoors ? "forbidden" : "permitted")}");
+#endif
 
             if (!forbidDoors)
             {
