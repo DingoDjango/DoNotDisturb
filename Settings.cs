@@ -5,6 +5,7 @@ namespace Do_Not_Disturb
 {
 	public class Settings : ModSettings
 	{
+		public static bool EnableChokePointDetection = true;
 		public static bool KeepUnlockedForUrgentTending = true;
 		public static bool KeepUnlockedForSurgery = true;
 		public static bool KeepUnlockedForAnyTending = true;
@@ -18,6 +19,14 @@ namespace Do_Not_Disturb
 			options.Begin(rect);
 
 			options.Gap(20f);
+
+			options.Label("DND_GeneralOptionsGeneral".Translate());
+
+			options.Gap(10f);
+
+			options.CheckboxLabeled("DND_EnableChokePointDetection".Translate(), ref EnableChokePointDetection, "DND_EnableChokePointDetection_Tooltip".Translate());
+
+			options.Gap(40f);
 
 			options.Label("DND_UnlockOptionsGeneral".Translate());
 
@@ -52,6 +61,7 @@ namespace Do_Not_Disturb
 		{
 			base.ExposeData();
 
+			Scribe_Values.Look(ref EnableChokePointDetection, "DND_EnableChokePointDetection", true);
 			Scribe_Values.Look(ref KeepUnlockedForUrgentTending, "DND_KeepUnlockedForUrgentTending", true);
 			Scribe_Values.Look(ref KeepUnlockedForSurgery, "DND_KeepUnlockedForSurgery", true);
 			Scribe_Values.Look(ref KeepUnlockedForAnyTending, "DND_KeepUnlockedForAnyTending", true);

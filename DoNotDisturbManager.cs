@@ -135,12 +135,20 @@ namespace Do_Not_Disturb
                 }
                 else if (state == LockState.WantLock)
                 {
-                    this.SetRoomDoors(room, true);
+                    if (!ChokePointDetector.IsChokePoint(room))
+                    {
+                        this.SetRoomDoors(room, true);
+                    }
+#if DEBUG
+                    else
+                    {
+                        Log.Message($"Do Not Disturb :: Skipped locking choke-point room {room.Role.label} #{room.ID}");
+                    }
+#endif
                 }
             }
         }
 
-        //TODO: what about doors to adjacent rooms / hallways?
         public void SetRoomDoors(Room room, bool forbidDoors)
         {
             foreach (Region roomRegion in room.Regions)

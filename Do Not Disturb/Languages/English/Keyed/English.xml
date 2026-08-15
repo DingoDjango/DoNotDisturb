@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <LanguageData>
 
+	<!-- General settings -->
+
+	<DND_GeneralOptionsGeneral>General:</DND_GeneralOptionsGeneral>
+
+	<DND_EnableChokePointDetection>Prevent locking choke-point rooms</DND_EnableChokePointDetection>
+	<DND_EnableChokePointDetection_Tooltip>When enabled, the mod will detect if a room is the only path between areas and skip locking it to avoid trapping pawns</DND_EnableChokePointDetection_Tooltip>
+
 	<!-- When to keep rooms UNLOCKED -->
 	
 	<DND_UnlockOptionsGeneral>Keep rooms unlocked when:</DND_UnlockOptionsGeneral>

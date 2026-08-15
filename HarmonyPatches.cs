@@ -9,6 +9,11 @@ namespace Do_Not_Disturb
 	[StaticConstructorOnStartup]
 	public static class HarmonyPatches
 	{
+		private static void Room_Notify_RoomShapeChanged_Postfix(Room __instance)
+		{
+			ChokePointDetector.InvalidateCache(__instance);
+		}
+
 		private static void Pawn_DraftController_Drafted_Postfix(Pawn_DraftController __instance)
 		{
 			Pawn pawn = __instance.pawn;
@@ -45,6 +50,11 @@ namespace Do_Not_Disturb
 				harmony.Patch(pawnDraftSetter,
 					prefix: null,
 					postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.Pawn_DraftController_Drafted_Postfix)));
+
+				MethodInfo roomShapeChanged = AccessTools.Method(typeof(Room), nameof(Room.Notify_RoomShapeChanged));
+				harmony.Patch(roomShapeChanged,
+					prefix: null,
+					postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.Room_Notify_RoomShapeChanged_Postfix)));
 			}
 			catch (Exception ex)
 			{
