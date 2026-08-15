@@ -61,12 +61,13 @@ namespace Do_Not_Disturb
                 return LockState.WantUnlock;
             }
 
-            if (pawn.InBed() && !this.KeepRoomUnlockedForTending(pawn))
+            if (this.IsActuallyResting(pawn) && !this.KeepRoomUnlockedForTending(pawn))
             {
                 return LockState.WantLock;
             }
 
-            if (Settings.KeepLockedForSoloRelaxation && pawn.CurJob?.def.driverClass == typeof(JobDriver_RelaxAlone))
+            if (Settings.KeepLockedForSoloRelaxation &&
+                pawn.CurJob?.def.driverClass == typeof(JobDriver_RelaxAlone))
             {
                 return LockState.WantLock;
             }
@@ -79,6 +80,21 @@ namespace Do_Not_Disturb
             return (Settings.KeepUnlockedForUrgentTending && HealthAIUtility.ShouldBeTendedNowByPlayerUrgent(pawn)) ||
                    (Settings.KeepUnlockedForSurgery && HealthAIUtility.ShouldHaveSurgeryDoneNow(pawn)) ||
                    (Settings.KeepUnlockedForAnyTending && HealthAIUtility.ShouldBeTendedNowByPlayer(pawn));
+        }
+
+        private bool IsActuallyResting(Pawn pawn)
+        {
+            if (pawn.InBed())
+            {
+                return true;
+            }
+
+            if (pawn.CurJob?.def == JobDefOf.LayDown && pawn.GetPosture().Laying())
+            {
+                return true;
+            }
+
+            return false;
         }
 
         public override void MapComponentTick()
