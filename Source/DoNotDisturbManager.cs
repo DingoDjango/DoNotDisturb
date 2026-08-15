@@ -160,19 +160,28 @@ namespace Do_Not_Disturb
 
                 if (state == LockState.WantUnlock)
                 {
+#if DEBUG
+                    Log.Message($"Do Not Disturb :: Processing {room.Role.label} #{room.ID} WantUnlock → SetRoomDoors(false)");
+#endif
                     this.SetRoomDoors(room, false);
                     this.UnlockGraceTick[room] = Find.TickManager.TicksGame + UnlockGraceTicks;
                 }
                 else if (state == LockState.WantLock)
                 {
+#if DEBUG
+                    Log.Message($"Do Not Disturb :: Processing {room.Role.label} #{room.ID} WantLock → checking conditions");
+#endif
                     if (!ChokePointDetector.IsChokePoint(room))
                     {
+#if DEBUG
+                        Log.Message($"Do Not Disturb :: OK {room.Role.label} #{room.ID} → SetRoomDoors(true)");
+#endif
                         this.SetRoomDoors(room, true);
                     }
 #if DEBUG
                     else
                     {
-                        Log.Message($"Do Not Disturb :: Skipped locking choke-point room {room.Role.label} #{room.ID}");
+                        Log.Message($"Do Not Disturb :: SKIP {room.Role.label} #{room.ID} lock — choke-point");
                     }
 #endif
                 }
