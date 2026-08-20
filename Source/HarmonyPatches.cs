@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
 using RimWorld;
@@ -6,63 +7,106 @@ using Verse;
 
 namespace Do_Not_Disturb
 {
-	[StaticConstructorOnStartup]
-	public static class HarmonyPatches
-	{
-		private static void Room_Notify_RoomShapeChanged_Postfix(Room __instance)
-		{
+    [StaticConstructorOnStartup]
+    public static class HarmonyPatches
+    {
+        private static void Room_Notify_RoomShapeChanged_Postfix(Room __instance)
+        {
 #if DEBUG
-			Log.Message($"Do Not Disturb :: Room shape changed → invalidating choke-point cache for {__instance.Role.label} #{__instance.ID}");
+            Log.Message($"Do Not Disturb :: Room shape changed → invalidating choke-point cache for {__instance.Role.label} #{__instance.ID}");
 #endif
-			ChokePointDetector.InvalidateCache(__instance);
-		}
+            ChokePointDetector.InvalidateCache(__instance);
+        }
 
-		private static void Pawn_DraftController_Drafted_Postfix(Pawn_DraftController __instance)
-		{
-			Pawn pawn = __instance.pawn;
+        private static void Pawn_DraftController_Drafted_Postfix(Pawn_DraftController __instance)
+        {
+            Pawn pawn = __instance.pawn;
 
-			if (pawn.Drafted)
-			{
-				DoNotDisturbManager manager = pawn.Map.GetComponent<DoNotDisturbManager>();
+            if (pawn.Drafted)
+            {
+                DoNotDisturbManager manager = pawn.Map?.GetComponent<DoNotDisturbManager>();
 
-				// Unforbid doors if a pawn has been drafted, for QoL purposes (otherwise it will take a second)
-				manager?.SetRoomDoors(pawn.GetRoom(), false);
-
-#if DEBUG
-				Log.Message($"Do Not Disturb :: Unlocked doors for drafted pawn {pawn.Name} with manager {manager.ToString()}");
-#endif
-			}
-		}
-
-		static HarmonyPatches()
-		{
-			try
-			{
-				Harmony harmony = new Harmony("dingo.donotdisturb");
+                // Unforbid doors if a pawn has been drafted, for QoL purposes (otherwise it will take a second)
+                manager?.SetRoomDoors(pawn.GetRoom(), false);
 
 #if DEBUG
-				Harmony.DEBUG = true;
+                Log.Message($"Do Not Disturb :: Unlocked doors for drafted pawn {pawn.Name}");
 #endif
+            }
+        }
 
-				MethodInfo pawnDraftSetter = AccessTools.PropertySetter(typeof(Pawn_DraftController), nameof(Pawn_DraftController.Drafted));
+        private static void Building_Door_GetGizmos_Postfix(Building_Door __instance, ref IEnumerable<Gizmo> __result)
+        {
+            // Only show DND toggle for player faction doors
+            if (__instance.Faction != Faction.OfPlayer)
+            {
+                return;
+            }
+
+            DoNotDisturbManager manager = __instance.Map?.GetComponent<DoNotDisturbManager>();
+            if (manager == null)
+            {
+                return;
+            }
+
+            Command_Toggle dndToggle = new Command_Toggle
+            {
+                defaultLabel = "DND_DoorToggle".Translate(),
+                defaultDesc = "DND_DoorToggleDesc".Translate(),
+                icon = TexCommand.HoldOpen,
+                isActive = () => manager.IsDndEnabled(__instance),
+                toggleAction = () => manager.SetDndEnabled(__instance, !manager.IsDndEnabled(__instance))
+            };
+
+            List<Gizmo> gizmoList = new List<Gizmo>(__result);
+            gizmoList.Add(dndToggle);
+            __result = gizmoList;
+        }
+
+        static HarmonyPatches()
+        {
+            try
+            {
+                Harmony harmony = new Harmony("dingo.donotdisturb");
 
 #if DEBUG
-				Log.Message($"Do Not Disturb :: pawnDraftSetter = {pawnDraftSetter.ToString()}");
+                Harmony.DEBUG = true;
 #endif
 
-				harmony.Patch(pawnDraftSetter,
-					prefix: null,
-					postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.Pawn_DraftController_Drafted_Postfix)));
+                MethodInfo pawnDraftSetter = AccessTools.PropertySetter(typeof(Pawn_DraftController), nameof(Pawn_DraftController.Drafted));
 
-				MethodInfo roomShapeChanged = AccessTools.Method(typeof(Room), nameof(Room.Notify_RoomShapeChanged));
-				harmony.Patch(roomShapeChanged,
-					prefix: null,
-					postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.Room_Notify_RoomShapeChanged_Postfix)));
-			}
-			catch (Exception ex)
-			{
-				Log.Error($"Do Not Disturb :: Failed to apply Harmony patches: {ex}");
-			}
-		}
-	}
+#if DEBUG
+                Log.Message($"Do Not Disturb :: pawnDraftSetter = {pawnDraftSetter.ToString()}");
+#endif
+
+                harmony.Patch(pawnDraftSetter,
+                    prefix: null,
+                    postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.Pawn_DraftController_Drafted_Postfix)));
+
+                MethodInfo roomShapeChanged = AccessTools.Method(typeof(Room), nameof(Room.Notify_RoomShapeChanged));
+                harmony.Patch(roomShapeChanged,
+                    prefix: null,
+                    postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.Room_Notify_RoomShapeChanged_Postfix)));
+
+                MethodInfo doorGetGizmos = AccessTools.Method(typeof(Building_Door), nameof(Building_Door.GetGizmos));
+                if (doorGetGizmos != null)
+                {
+                    harmony.Patch(doorGetGizmos,
+                        prefix: null,
+                        postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.Building_Door_GetGizmos_Postfix)));
+#if DEBUG
+                    Log.Message("Do Not Disturb :: Patched Building_Door.GetGizmos successfully");
+#endif
+                }
+                else
+                {
+                    Log.Error("Do Not Disturb :: Could not find Building_Door.GetGizmos method to patch");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Do Not Disturb :: Failed to apply Harmony patches: {ex}");
+            }
+        }
+    }
 }

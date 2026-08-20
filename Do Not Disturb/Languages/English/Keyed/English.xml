@@ -34,4 +34,8 @@
 	<DND_KeepLockedForLovin>	• Pawns are lovin'</DND_KeepLockedForLovin>
 	<DND_KeepLockedForLovin_Tooltip>When a colonist is doing lovin' in bed, lock their room</DND_KeepLockedForLovin_Tooltip>
 
+	<!-- Per-door DND toggle -->
+	<DND_DoorToggle>Do Not Disturb</DND_DoorToggle>
+	<DND_DoorToggleDesc>When enabled, this door will be automatically managed by the Do Not Disturb mod. Disable to fully control this door yourself.</DND_DoorToggleDesc>
+
 </LanguageData>
