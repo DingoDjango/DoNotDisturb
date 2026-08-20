@@ -36,6 +36,6 @@
 
 	<!-- Per-door DND toggle -->
 	<DND_DoorToggle>Do Not Disturb</DND_DoorToggle>
-	<DND_DoorToggleDesc>When enabled, this door will be automatically managed by the Do Not Disturb mod. Disable to fully control this door yourself.</DND_DoorToggleDesc>
+	<DND_DoorToggleDesc>Automatically allow/disallow this door with Do Not Disturb mod.</DND_DoorToggleDesc>
 
 </LanguageData>
