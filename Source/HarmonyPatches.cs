@@ -25,8 +25,6 @@ namespace Do_Not_Disturb
             if (pawn.Drafted)
             {
                 DoNotDisturbManager manager = pawn.Map?.GetComponent<DoNotDisturbManager>();
-
-                // Unforbid doors if a pawn has been drafted, for QoL purposes (otherwise it will take a second)
                 manager?.SetRoomDoors(pawn.GetRoom(), false);
 
 #if DEBUG
@@ -37,7 +35,6 @@ namespace Do_Not_Disturb
 
         private static void Building_Door_GetGizmos_Postfix(Building_Door __instance, ref IEnumerable<Gizmo> __result)
         {
-            // Only show DND toggle for player faction doors
             if (__instance.Faction != Faction.OfPlayer)
             {
                 return;
