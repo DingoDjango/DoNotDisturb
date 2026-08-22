@@ -33,7 +33,7 @@ namespace Do_Not_Disturb
                 DoNotDisturbManager manager = pawn.Map?.GetComponent<DoNotDisturbManager>();
                 if (manager != null)
                 {
-                    manager.PawnStartedDnd(pawn);
+                    manager.PawnStartedDnd(pawn, room);
                 }
             };
             toil.defaultCompleteMode = ToilCompleteMode.Instant;

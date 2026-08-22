@@ -237,22 +237,11 @@ namespace Do_Not_Disturb
 
         private static IEnumerable<(Room, Region)> FindAdjacentRooms(Region doorRegion, Room currentRoom)
         {
-            Queue<Region> queue = new Queue<Region>();
-            HashSet<Region> visited = new HashSet<Region>();
-            queue.Enqueue(doorRegion);
-            visited.Add(doorRegion);
-
-            while (queue.Count > 0)
+            foreach (Region region in doorRegion.Neighbors)
             {
-                Region region = queue.Dequeue();
-                yield return (region.Room, region);
-                foreach (Region neighbor in region.Neighbors)
+                if (region != null && region.Room != currentRoom)
                 {
-                    if (!visited.Contains(neighbor) && neighbor.Room != currentRoom)
-                    {
-                        visited.Add(neighbor);
-                        queue.Enqueue(neighbor);
-                    }
+                    yield return (region.Room, region);
                 }
             }
         }

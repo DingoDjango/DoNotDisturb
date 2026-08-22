@@ -87,7 +87,7 @@ namespace Do_Not_Disturb
             Log.Message($"[DND] EndCurrentJob postfix for DND-active pawn {pawn.LabelShort}");
 #endif
             
-            Room room = pawn.GetRoom();
+            Room room = manager.GetDndRoom(pawn);
             if (room != null)
             {
                 DoNotDisturbUtility.SetRoomDoors(room, forbid: false, pawn.Map);

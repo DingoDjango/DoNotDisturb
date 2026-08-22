@@ -9,7 +9,7 @@ namespace Do_Not_Disturb
     {
         private List<Building_Door> scribeDisabledDoors;
         private readonly Dictionary<Building_Door, bool> doorDisabledDict = new Dictionary<Building_Door, bool>();
-        private readonly HashSet<int> pawnsDndActive = new HashSet<int>();
+        private readonly Dictionary<int, Room> pawnsDndRooms = new Dictionary<int, Room>();
 
         public DoNotDisturbManager(Map map) : base(map)
         {
@@ -38,11 +38,11 @@ namespace Do_Not_Disturb
             }
         }
 
-        public void PawnStartedDnd(Pawn pawn)
+        public void PawnStartedDnd(Pawn pawn, Room room)
         {
-            if (pawn != null)
+            if (pawn != null && room != null)
             {
-                pawnsDndActive.Add(pawn.thingIDNumber);
+                pawnsDndRooms[pawn.thingIDNumber] = room;
 #if DEBUG
                 Log.Message($"[DND] Registered pawn {pawn.LabelShort} as DND active");
 #endif
@@ -53,7 +53,7 @@ namespace Do_Not_Disturb
         {
             if (pawn != null)
             {
-                bool wasActive = pawnsDndActive.Remove(pawn.thingIDNumber);
+                bool wasActive = pawnsDndRooms.Remove(pawn.thingIDNumber);
 #if DEBUG
                 Log.Message($"[DND] Unregistered pawn {pawn.LabelShort} from DND (was active: {wasActive})");
 #endif
@@ -62,7 +62,17 @@ namespace Do_Not_Disturb
 
         public bool IsPawnDndActive(Pawn pawn)
         {
-            return pawn != null && pawnsDndActive.Contains(pawn.thingIDNumber);
+            return pawn != null && pawnsDndRooms.ContainsKey(pawn.thingIDNumber);
+        }
+
+        public Room GetDndRoom(Pawn pawn)
+        {
+            if (pawn != null && pawnsDndRooms.TryGetValue(pawn.thingIDNumber, out Room room))
+            {
+                return room;
+            }
+
+            return null;
         }
 
         public override void ExposeData()
