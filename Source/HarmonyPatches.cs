@@ -25,8 +25,6 @@ namespace Do_Not_Disturb
             if (pawn.Drafted)
             {
                 DoNotDisturbManager manager = pawn.Map?.GetComponent<DoNotDisturbManager>();
-
-                // Unforbid doors if a pawn has been drafted, for QoL purposes (otherwise it will take a second)
                 manager?.SetRoomDoors(pawn.GetRoom(), false);
 
 #if DEBUG
@@ -37,7 +35,6 @@ namespace Do_Not_Disturb
 
         private static void Building_Door_GetGizmos_Postfix(Building_Door __instance, ref IEnumerable<Gizmo> __result)
         {
-            // Only show DND toggle for player faction doors
             if (__instance.Faction != Faction.OfPlayer)
             {
                 return;
@@ -74,11 +71,6 @@ namespace Do_Not_Disturb
 #endif
 
                 MethodInfo pawnDraftSetter = AccessTools.PropertySetter(typeof(Pawn_DraftController), nameof(Pawn_DraftController.Drafted));
-
-#if DEBUG
-                Log.Message($"Do Not Disturb :: pawnDraftSetter = {pawnDraftSetter.ToString()}");
-#endif
-
                 harmony.Patch(pawnDraftSetter,
                     prefix: null,
                     postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.Pawn_DraftController_Drafted_Postfix)));
@@ -89,19 +81,9 @@ namespace Do_Not_Disturb
                     postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.Room_Notify_RoomShapeChanged_Postfix)));
 
                 MethodInfo doorGetGizmos = AccessTools.Method(typeof(Building_Door), nameof(Building_Door.GetGizmos));
-                if (doorGetGizmos != null)
-                {
                     harmony.Patch(doorGetGizmos,
                         prefix: null,
                         postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.Building_Door_GetGizmos_Postfix)));
-#if DEBUG
-                    Log.Message("Do Not Disturb :: Patched Building_Door.GetGizmos successfully");
-#endif
-                }
-                else
-                {
-                    Log.Error("Do Not Disturb :: Could not find Building_Door.GetGizmos method to patch");
-                }
             }
             catch (Exception ex)
             {

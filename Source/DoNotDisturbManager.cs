@@ -15,10 +15,6 @@ namespace Do_Not_Disturb
         }
 
         private readonly Dictionary<Room, LockState> RoomState = new Dictionary<Room, LockState>();
-
-        // Per-door DND enabled/disabled storage
-        // Door NOT in dict = enabled (default ON)
-        // Door in dict with value=false = manually disabled by player
         private readonly Dictionary<Building_Door, bool> doorDisabledDict = new Dictionary<Building_Door, bool>();
 
         public bool IsDndEnabled(Building_Door door)
@@ -28,7 +24,7 @@ namespace Do_Not_Disturb
             {
                 return enabled;
             }
-            return true; // Default ON
+            return true;
         }
 
         public void SetDndEnabled(Building_Door door, bool enabled)
@@ -36,7 +32,6 @@ namespace Do_Not_Disturb
             if (door == null) return;
             if (enabled)
             {
-                // Default state — remove from dict to keep it compact
                 this.doorDisabledDict.Remove(door);
             }
             else
@@ -50,7 +45,6 @@ namespace Do_Not_Disturb
             base.ExposeData();
             if (Scribe.mode == LoadSaveMode.Saving)
             {
-                // Persist only disabled doors (compact)
                 this.scribeDisabledDoors = this.doorDisabledDict.Keys.ToList();
                 Scribe_Collections.Look(ref this.scribeDisabledDoors, "dndDisabledDoors", LookMode.Reference);
             }
@@ -91,8 +85,6 @@ namespace Do_Not_Disturb
         {
             List<Pawn> owners = room.Owners.ToList();
 
-            // FIRST: If any non-owner colonist is inside, unlock so they can leave
-            // Animals excluded — pets don't count as "trapped colonists"
             foreach (Pawn p in room.ContainedAndAdjacentThings.OfType<Pawn>())
             {
                 if (!p.Dead && !owners.Contains(p) && p.Faction == Faction.OfPlayer && p.RaceProps != null && !p.RaceProps.Animal)
@@ -257,7 +249,6 @@ namespace Do_Not_Disturb
                     continue;
                 }
 
-                // If no owner is present in room, use first owner for state determination
                 Pawn pawn = owners.FirstOrDefault(o => o.GetRoom() == room) ?? owners[0];
                 this.RefreshRoomState(room, pawn);
             }
@@ -342,7 +333,6 @@ namespace Do_Not_Disturb
                         continue;
                     }
 
-                    // Skip doors where player has disabled DND
                     if (!this.IsDndEnabled(door))
                     {
 #if DEBUG
@@ -353,8 +343,6 @@ namespace Do_Not_Disturb
 
                     if (!forbidDoors)
                     {
-                        // When unlocking, respect adjacent rooms that want lock
-                        // BFS through unroomed passages to find actual room beyond
                         if (this.AdjacentRoomWantsLock(doorRegion, room))
                         {
 #if DEBUG
