@@ -57,67 +57,81 @@ namespace Do_Not_Disturb
 #endif
 
             bool result = CalculateIsChokePoint(room);
-            int validUntilTick = Find.TickManager.TicksGame + 3000;
+
             Cache[room] = new CachedChokePointData
             {
                 IsChokePoint = result,
-                ValidUntilTick = validUntilTick
+                ValidUntilTick = Find.TickManager.TicksGame + GenTicks.TicksPerRealSecond * 10
             };
+
             return result;
         }
 
+#if DEBUG
         public static void LogCacheStats()
         {
-#if DEBUG
-            Log.Message($"Do Not Disturb :: Choke-point cache stats - Hits: {CacheHits}, Misses: {CacheMisses}, Hit rate: {(CacheHits + CacheMisses > 0 ? (double)CacheHits / (CacheHits + CacheMisses) * 100 : 0):F1}%");
-#endif
+            Log.Message($"Do Not Disturb :: Choke-point cache stats — hits: {CacheHits}, misses: {CacheMisses}, size: {Cache.Count}");
         }
+#endif
 
         private static bool CalculateIsChokePoint(Room room)
         {
-            if (room == null || !room.ProperRoom)
+            HashSet<Room> adjacentRooms = new HashSet<Room>();
+
+            foreach (Region region in room.Regions)
             {
+                foreach (Region neighbor in region.Neighbors)
+                {
+                    if (neighbor.Room != null && neighbor.Room != room && neighbor.door != null)
+                    {
+                        adjacentRooms.Add(neighbor.Room);
+                    }
+                }
+            }
+
+            if (adjacentRooms.Count < 2)
+            {
+#if DEBUG
+                Log.Message($"Do Not Disturb :: Choke-point check {room.Role.label} #{room.ID}: skipped (only {adjacentRooms.Count} adjacent rooms)");
+#endif
                 return false;
             }
 
-            List<Region> regions = room.Regions;
-            if (regions.Count == 0)
+            List<Room> roomList = new List<Room>(adjacentRooms);
+            Room startRoom = roomList[0];
+            Region root = startRoom.FirstRegion;
+
+            if (root == null)
             {
+#if DEBUG
+                Log.Message($"Do Not Disturb :: Choke-point check {room.Role.label} #{room.ID}: skipped (start room has no regions)");
+#endif
                 return false;
             }
 
-            foreach (Region region in regions)
+            int reachedCount = 0;
+            HashSet<Room> reachedRooms = new HashSet<Room>();
+
+            RegionProcessor processor = delegate (Region r)
             {
-                if (region == null)
+                if (r.Room != null && r.Room != startRoom && roomList.Contains(r.Room) && reachedRooms.Add(r.Room))
                 {
-                    continue;
+                    reachedCount++;
                 }
+                return reachedCount >= roomList.Count - 1;
+            };
 
-                int doorCount = 0;
-                foreach (RegionLink regionLink in region.links.Links)
-                {
-                    if (regionLink == null)
-                    {
-                        continue;
-                    }
+            RegionEntryPredicate entryCondition = (Region from, Region to) => to.Room != room;
 
-                    Region otherRegion = regionLink.GetOtherRegion(region);
-                    if (otherRegion != null && otherRegion.Room != room)
-                    {
-                        if (regionLink.RegionA != null && regionLink.RegionA.District != null)
-                        {
-                            doorCount++;
-                        }
-                    }
-                }
+            RegionTraverser.BreadthFirstTraverse(root, entryCondition, processor, 999999, RegionType.Set_Passable);
 
-                if (doorCount == 1)
-                {
-                    return true;
-                }
-            }
+            bool isChokePoint = reachedCount < roomList.Count - 1;
 
-            return false;
+#if DEBUG
+            Log.Message($"Do Not Disturb :: Choke-point check {room.Role.label} #{room.ID}: adjacent={adjacentRooms.Count}, reachable={reachedCount + 1}/{roomList.Count}, isChokePoint={isChokePoint}");
+#endif
+
+            return isChokePoint;
         }
     }
 }

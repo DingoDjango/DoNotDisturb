@@ -14,8 +14,12 @@ namespace Do_Not_Disturb
             WantUnlock
         }
 
-        private readonly Dictionary<Building_Door, bool> doorDisabledDict = new Dictionary<Building_Door, bool>();
         private readonly Dictionary<Room, LockState> RoomState = new Dictionary<Room, LockState>();
+
+        // Per-door DND enabled/disabled storage
+        // Door NOT in dict = enabled (default ON)
+        // Door in dict with value=false = manually disabled by player
+        private readonly Dictionary<Building_Door, bool> doorDisabledDict = new Dictionary<Building_Door, bool>();
 
         public bool IsDndEnabled(Building_Door door)
         {
@@ -24,7 +28,7 @@ namespace Do_Not_Disturb
             {
                 return enabled;
             }
-            return true;
+            return true; // Default ON
         }
 
         public void SetDndEnabled(Building_Door door, bool enabled)
@@ -32,6 +36,7 @@ namespace Do_Not_Disturb
             if (door == null) return;
             if (enabled)
             {
+                // Default state — remove from dict to keep it compact
                 this.doorDisabledDict.Remove(door);
             }
             else
@@ -45,6 +50,7 @@ namespace Do_Not_Disturb
             base.ExposeData();
             if (Scribe.mode == LoadSaveMode.Saving)
             {
+                // Persist only disabled doors (compact)
                 this.scribeDisabledDoors = this.doorDisabledDict.Keys.ToList();
                 Scribe_Collections.Look(ref this.scribeDisabledDoors, "dndDisabledDoors", LookMode.Reference);
             }
@@ -65,188 +71,258 @@ namespace Do_Not_Disturb
             }
         }
 
+        private List<Building_Door> scribeDisabledDoors;
+
         private void RefreshRoomState(Room room, Pawn pawn)
         {
-            if (room != null && !room.Contains(pawn))
+            if (!this.RoomState.TryGetValue(room, out LockState roomState))
             {
-                return;
+                this.RoomState[room] = LockState.Untouched;
             }
 
-            LockState desiredState = this.DetermineLockState(room, pawn);
-            this.RoomState[room] = desiredState;
-
-            if (desiredState == LockState.WantLock && SettingHandler.ShouldLockRoom(room, pawn))
+            LockState pawnState = this.DetermineLockState(room, pawn);
+            if (pawnState > roomState)
             {
-                this.SetRoomDoors(room, false);
-            }
-            else if (desiredState == LockState.WantUnlock && SettingHandler.ShouldUnlockRoom(room, pawn))
-            {
-                this.SetRoomDoors(room, true);
+                this.RoomState[room] = pawnState;
             }
         }
 
         private LockState DetermineLockState(Room room, Pawn pawn)
         {
-            if (room == null || room.Owners.Count == 0)
-            {
-                return LockState.WantLock;
-            }
+            List<Pawn> owners = room.Owners.ToList();
 
-            if (room.Owners.Count == 1)
+            // FIRST: If any non-owner colonist is inside, unlock so they can leave
+            // Animals excluded — pets don't count as "trapped colonists"
+            foreach (Pawn p in room.ContainedAndAdjacentThings.OfType<Pawn>())
             {
-                Pawn roomOwner = room.Owners.First();
-                if (SettingHandler.ShouldLockRoom(room, roomOwner))
+                if (!p.Dead && !owners.Contains(p) && p.Faction == Faction.OfPlayer && p.RaceProps != null && !p.RaceProps.Animal)
                 {
-                    this.RefreshRoomStateAdjacentRooms(room, roomOwner);
-                    if (this.AdjacentRoomWantsLock(room))
-                    {
-                        return LockState.WantLock;
-                    }
-                }
-                else
-                {
+#if DEBUG
+                    Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} → WantUnlock (non-owner {p.LabelShort} inside)");
+#endif
                     return LockState.WantUnlock;
                 }
             }
 
-            return LockState.Untouched;
+            if ((!owners.Contains(pawn)) ||
+                (pawn.needs.food.CurCategory >= HungerCategory.UrgentlyHungry) ||
+                (pawn.needs.joy.CurCategory <= JoyCategory.Low))
+            {
+#if DEBUG
+                Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} → WantUnlock (pawn={pawn.LabelShort}, not owner/hungry/low joy)");
+#endif
+                return LockState.WantUnlock;
+            }
+
+            foreach (Pawn owner in owners)
+            {
+                if (owner.GetRoom() != room)
+                {
+#if DEBUG
+                    Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} → WantUnlock (co-owner {owner.LabelShort} left)");
+#endif
+                    return LockState.WantUnlock;
+                }
+            }
+
+            if (pawn.GetRoom() != room)
+            {
+#if DEBUG
+                Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} → WantUnlock (pawn not in room)");
+#endif
+                return LockState.WantUnlock;
+            }
+
+            if (Settings.KeepUnlockedForResearch && pawn.CurJob?.def == JobDefOf.Research)
+            {
+#if DEBUG
+                Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} → WantUnlock (researching)");
+#endif
+                return LockState.WantUnlock;
+            }
+
+            if (owners.Contains(pawn))
+            {
+                if (this.IsActuallyResting(pawn) && !this.KeepRoomUnlockedForTending(pawn))
+                {
+#if DEBUG
+                    Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} → WantLock (resting, pawn={pawn.LabelShort})");
+#endif
+                    return LockState.WantLock;
+                }
+
+                if (Settings.KeepLockedForSoloRelaxation &&
+                    pawn.CurJob?.def.driverClass == typeof(JobDriver_RelaxAlone))
+                {
+#if DEBUG
+                    Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} → WantLock (solo relaxation, pawn={pawn.LabelShort})");
+#endif
+                    return LockState.WantLock;
+                }
+
+                if (Settings.KeepLockedForLovin &&
+                    pawn.CurJob?.def == JobDefOf.Lovin)
+                {
+#if DEBUG
+                    Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} → WantLock (lovin', pawn={pawn.LabelShort})");
+#endif
+                    return LockState.WantLock;
+                }
+            }
+
+            return LockState.WantUnlock;
         }
 
         private bool KeepRoomUnlockedForTending(Pawn pawn)
         {
-            if (!Settings.KeepUnlockedForAnyTending)
-            {
-                return false;
-            }
-
-            Map map = pawn.Map;
-            if (map == null)
-            {
-                return false;
-            }
-
-            HealthAIUtility.HealthAIUtility_Pawn pawnInfo;
-            if (!HealthAIUtility.GetMedicalRestTargetPriority(pawn, out pawnInfo, out DrugAIUtility.DrugAIUtility_TreatmentPriority drugInfo))
-            {
-                return false;
-            }
-
-            bool flag = pawnInfo == HealthAIUtility.HealthAIUtility_TreatableWhileResting || pawnInfo == HealthAIUtility.HealthAIUtility_Critical;
-            bool flag2 = pawn.HealthTracker.HasHediffsNeedingTendByPlayer();
             if (Settings.KeepUnlockedForUrgentTending)
             {
-                flag = flag || pawn.HealthTracker.HasHediffsNeedingTending();
-            }
-            return flag || flag2;
-        }
-
-        private bool HasLifeThreateningHediff(Pawn pawn)
-        {
-#if DEBUG
-            Log.Message($"Do Not Disturb :: Checking hediffs for {pawn.LabelShortCapitalized} ({pawn.RefsCount()})...");
-#endif
-
-            List<Hediff> hediffs = pawn.healthTracker.hediffSet.hediffs;
-            for (int i = 0; i < hediffs.Count; i++)
-            {
-                Hediff hediff = hediffs[i];
-                if (hediff.IsCurrentlyLifeThreatening && !hediff.FullyImmune())
+                if (HealthAIUtility.ShouldBeTendedNowByPlayerUrgent(pawn))
                 {
 #if DEBUG
-                    Log.Message($"Do Not Disturb :: Found life-threatening hediff: {hediff.LabelCap}");
+                    Log.Message($"Do Not Disturb :: {pawn.Name} needs urgent tending → unlock");
 #endif
                     return true;
                 }
+                if (HasLifeThreateningHediff(pawn))
+                {
+#if DEBUG
+                    Log.Message($"Do Not Disturb :: {pawn.Name} has life-threatening hediff → unlock");
+#endif
+                    return true;
+                }
+            }
+            if (Settings.KeepUnlockedForSurgery && HealthAIUtility.ShouldHaveSurgeryDoneNow(pawn))
+            {
+#if DEBUG
+                Log.Message($"Do Not Disturb :: {pawn.Name} needs surgery → unlock");
+#endif
+                return true;
+            }
+            if (Settings.KeepUnlockedForAnyTending && HealthAIUtility.ShouldBeTendedNowByPlayer(pawn))
+            {
+#if DEBUG
+                Log.Message($"Do Not Disturb :: {pawn.Name} needs tending → unlock");
+#endif
+                return true;
             }
 
             return false;
         }
 
+        private bool HasLifeThreateningHediff(Pawn pawn)
+        {
+            foreach (Hediff hediff in pawn.health.hediffSet.hediffs)
+            {
+                if (hediff.IsCurrentlyLifeThreatening && !hediff.FullyImmune())
+                {
+#if DEBUG
+                    Log.Message($"Do Not Disturb :: {pawn.Name} has life-threatening hediff: {hediff.Label}");
+#endif
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private bool IsActuallyResting(Pawn pawn)
         {
-            return pawn.healthTracker.CanBleed && pawn.healthTracker.InPainShock && pawn.relations.RelationTypeCount > 0;
+            if (pawn.InBed())
+            {
+                return true;
+            }
+
+            if (pawn.CurJob?.def == JobDefOf.LayDown && pawn.GetPosture().Laying())
+            {
+                return true;
+            }
+
+            return false;
         }
 
         public override void MapComponentTick()
         {
-            Map map = this.Map;
-            if (map == null)
+            if ((Find.TickManager.TicksGame % GenTicks.TicksPerRealSecond) != 0)
             {
                 return;
             }
 
-            List<Room> roomsToProcess = new List<Room>(map.AllRooms);
-            for (int i = 0; i < roomsToProcess.Count; i++)
+            this.RoomState.Clear();
+
+            foreach (Room room in this.map.regionGrid.AllRooms)
             {
-                Room room = roomsToProcess[i];
-                if (room != null && room.Owners.Count > 0)
+                List<Pawn> owners = room.Owners.ToList();
+                if (owners.Count == 0)
                 {
-                    foreach (Pawn owner in room.Owners)
-                    {
-                        if (owner.Spawned && owner.IsHashIntervalTick(250))
-                        {
-                            if (owner.healthTracker == null || owner.ShouldBeDead() || owner.ShouldBeDowned() || owner.ShouldBeDeathrestingOrInComa())
-                            {
-                                continue;
-                            }
+                    continue;
+                }
 
-                            bool isResting = this.IsActuallyResting(owner);
-                            bool unlockedForTending = this.KeepRoomUnlockedForTending(owner) || this.HasLifeThreateningHediff(owner);
-                            bool shouldUnlock = isResting || unlockedForTending;
+                // If no owner is present in room, use first owner for state determination
+                Pawn pawn = owners.FirstOrDefault(o => o.GetRoom() == room) ?? owners[0];
+                this.RefreshRoomState(room, pawn);
+            }
 
+            foreach (KeyValuePair<Room, LockState> keyPair in this.RoomState)
+            {
+                Room room = keyPair.Key;
+                LockState state = keyPair.Value;
+
+                if (state == LockState.WantUnlock)
+                {
 #if DEBUG
-                            if (unlockedForTending)
-                            {
-                                Log.Message($"Do Not Disturb :: Keeping {room.Role.label} unlocked for tending: {owner.LabelShortCapitalized}");
-                            }
+                    Log.Message($"Do Not Disturb :: Processing {room.Role.label} #{room.ID} WantUnlock → SetRoomDoors(false)");
 #endif
-
-                            if (isResting)
-                            {
-                                this.RoomState[room] = LockState.WantUnlock;
-                                this.SetRoomDoors(room, true);
-                            }
-                            else if (unlockedForTending)
-                            {
-                                this.RefreshRoomState(room, owner);
-                                if (this.RoomState[room] == LockState.WantLock)
-                                {
-                                    this.SetRoomDoors(room, true);
-                                }
-                            }
-                            else
-                            {
-                                if (this.RoomState[room] == LockState.WantUnlock)
-                                {
-                                    this.SetRoomDoors(room, false);
-                                }
-                            }
-                        }
+                    this.SetRoomDoors(room, false);
+                }
+                else if (state == LockState.WantLock)
+                {
+#if DEBUG
+                    Log.Message($"Do Not Disturb :: Processing {room.Role.label} #{room.ID} WantLock → checking conditions");
+#endif
+                    if (!ChokePointDetector.IsChokePoint(room))
+                    {
+#if DEBUG
+                        Log.Message($"Do Not Disturb :: OK {room.Role.label} #{room.ID} → SetRoomDoors(true)");
+#endif
+                        this.SetRoomDoors(room, true);
                     }
+#if DEBUG
+                    else
+                    {
+                        Log.Message($"Do Not Disturb :: SKIP {room.Role.label} #{room.ID} lock — choke-point");
+                    }
+#endif
                 }
             }
         }
 
         private bool AdjacentRoomWantsLock(Region startRegion, Room currentRoom)
         {
-            TraverseParams traverseParams = TraverseParms.For(TraversalMode.ByPawn);
-            foreach (Region adjacentRegion in startRegion.Neighbors)
+            Queue<Region> queue = new Queue<Region>();
+            HashSet<Region> visited = new HashSet<Region>();
+            queue.Enqueue(startRegion);
+            visited.Add(startRegion);
+
+            while (queue.Count > 0)
             {
-                if (adjacentRegion == null || !adjacentRegion.Allows(traverseParams, false) || adjacentRegion.Cells.Any(cell => currentRoom == currentRoom.Map.GetRegionAt(cell)))
+                Region region = queue.Dequeue();
+                Room regionRoom = region.Room;
+                if (regionRoom != null &&
+                    regionRoom != currentRoom &&
+                    regionRoom.ProperRoom &&
+                    this.RoomState.TryGetValue(regionRoom, out LockState state) &&
+                    state == LockState.WantLock &&
+                    !ChokePointDetector.IsChokePoint(regionRoom))
                 {
-                    continue;
+                    return true;
                 }
 
-                Room adjacentRoom = adjacentRegion.Room;
-                if (adjacentRoom?.Owners.Count > 0)
+                foreach (Region neighbor in region.Neighbors)
                 {
-                    if (adjacentRoom.Owners.Count == 1)
+                    if (!visited.Contains(neighbor) && neighbor.Room != currentRoom)
                     {
-                        Pawn adjacentOwner = adjacentRoom.Owners.First();
-                        if (SettingHandler.ShouldLockRoom(adjacentRoom, adjacentOwner))
-                        {
-                            return true;
-                        }
+                        visited.Add(neighbor);
+                        queue.Enqueue(neighbor);
                     }
                 }
             }
@@ -256,53 +332,48 @@ namespace Do_Not_Disturb
 
         public void SetRoomDoors(Room room, bool forbidDoors)
         {
-            if (room == null)
+            foreach (Region roomRegion in room.Regions)
             {
-                return;
-            }
-
-            if (room.ContainedAndAdjacentThings == null)
-            {
-                return;
-            }
-
-            foreach (Thing thing in room.ContainedAndAdjacentThings)
-            {
-                if (thing is Building_Door building_Door && building_Door.Spawned)
+                foreach (Region doorRegion in roomRegion.Neighbors)
                 {
-#if DEBUG
-                    string doorLabel = building_Door.def.label;
-                    Log.Message($"Do Not Disturb :: Setting door {doorLabel} forbid state to {forbidDoors}");
-#endif
-
-                    if (!this.IsDndEnabled(building_Door))
+                    Building_Door door = doorRegion.door;
+                    if (door == null)
                     {
-                        building_Door.SetForbidden(forbidDoors, false);
+                        continue;
                     }
+
+                    // Skip doors where player has disabled DND
+                    if (!this.IsDndEnabled(door))
+                    {
+#if DEBUG
+                        Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} door #{door.thingIDNumber} skipped — DND disabled by player");
+#endif
+                        continue;
+                    }
+
+                    if (!forbidDoors)
+                    {
+                        // When unlocking, respect adjacent rooms that want lock
+                        // BFS through unroomed passages to find actual room beyond
+                        if (this.AdjacentRoomWantsLock(doorRegion, room))
+                        {
+#if DEBUG
+                            Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} door kept forbidden — adjacent room wants lock");
+#endif
+                            continue;
+                        }
+                    }
+
+                    door.SetForbidden(forbidDoors, false);
                 }
             }
+#if DEBUG
+            Log.Message($"Do Not Disturb :: {room.Role.label} #{room.ID} doors → {(forbidDoors ? "forbidden" : "permitted")}");
+#endif
         }
 
-        private static string scribeDisabledDoors;
-
-        private void RefreshRoomStateAdjacentRooms(Room room, Pawn pawn)
+        public DoNotDisturbManager(Map map) : base(map)
         {
-            if (room == null || room.FirstRegion == null)
-            {
-                return;
-            }
-
-            foreach (Region adjacentRegion in room.FirstRegion.Neighbors)
-            {
-                if (adjacentRegion != null && adjacentRegion.Allows(TraverseParms.For(TraversalMode.ByPawn), false))
-                {
-                    Room adjacentRoom = adjacentRegion.Room;
-                    if (adjacentRoom != null && adjacentRoom.Owners.Count > 0)
-                    {
-                        adjacentRoom.Owners.Remove(pawn);
-                    }
-                }
-            }
         }
     }
 }
