@@ -7,6 +7,7 @@ namespace Do_Not_Disturb
 {
     public class DoNotDisturbManager : MapComponent
     {
+        private List<Building_Door> scribeDisabledDoors;
         private readonly Dictionary<Building_Door, bool> doorDisabledDict = new Dictionary<Building_Door, bool>();
         private readonly HashSet<int> pawnsDndActive = new HashSet<int>();
 
@@ -42,7 +43,9 @@ namespace Do_Not_Disturb
             if (pawn != null)
             {
                 pawnsDndActive.Add(pawn.thingIDNumber);
+#if DEBUG
                 Log.Message($"[DND] Registered pawn {pawn.LabelShort} as DND active");
+#endif
             }
         }
 
@@ -51,7 +54,9 @@ namespace Do_Not_Disturb
             if (pawn != null)
             {
                 bool wasActive = pawnsDndActive.Remove(pawn.thingIDNumber);
+#if DEBUG
                 Log.Message($"[DND] Unregistered pawn {pawn.LabelShort} from DND (was active: {wasActive})");
+#endif
             }
         }
 
@@ -84,7 +89,5 @@ namespace Do_Not_Disturb
                 }
             }
         }
-
-        private List<Building_Door> scribeDisabledDoors;
     }
 }

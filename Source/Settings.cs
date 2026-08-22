@@ -9,7 +9,6 @@ namespace Do_Not_Disturb
         public static bool KeepUnlockedForUrgentTending = true;
         public static bool KeepUnlockedForSurgery = true;
         public static bool KeepUnlockedForAnyTending = true;
-        public static bool KeepUnlockedForResearch = true;
         public static bool KeepLockedForSoloRelaxation = true;
         public static bool KeepLockedForLovin = false;
 
@@ -43,10 +42,6 @@ namespace Do_Not_Disturb
 
             options.CheckboxLabeled("DND_KeepUnlockedForAnyTending".Translate(), ref KeepUnlockedForAnyTending, "DND_KeepUnlockedForAnyTending_Tooltip".Translate());
 
-            options.Gap(10f);
-
-            options.CheckboxLabeled("DND_KeepUnlockedForResearch".Translate(), ref KeepUnlockedForResearch, "DND_KeepUnlockedForResearch_Tooltip".Translate());
-
             options.Gap(40f);
 
             options.Label("DND_LockOptionsGeneral".Translate());
@@ -70,7 +65,6 @@ namespace Do_Not_Disturb
             Scribe_Values.Look(ref KeepUnlockedForUrgentTending, "DND_KeepUnlockedForUrgentTending", true);
             Scribe_Values.Look(ref KeepUnlockedForSurgery, "DND_KeepUnlockedForSurgery", true);
             Scribe_Values.Look(ref KeepUnlockedForAnyTending, "DND_KeepUnlockedForAnyTending", true);
-            Scribe_Values.Look(ref KeepUnlockedForResearch, "DND_KeepUnlockedForResearch", true);
             Scribe_Values.Look(ref KeepLockedForSoloRelaxation, "DND_KeepLockedForSoloRelaxation", true);
             Scribe_Values.Look(ref KeepLockedForLovin, "DND_KeepLockedForLovin", false);
         }

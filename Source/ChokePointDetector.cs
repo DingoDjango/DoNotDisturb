@@ -12,10 +12,6 @@ namespace Do_Not_Disturb
         }
 
         private static readonly Dictionary<Room, CachedChokePointData> Cache = new Dictionary<Room, CachedChokePointData>();
-#if DEBUG
-        private static int CacheHits = 0;
-        private static int CacheMisses = 0;
-#endif
 
         public static void InvalidateCache(Room room)
         {
@@ -46,15 +42,8 @@ namespace Do_Not_Disturb
             if (Cache.TryGetValue(room, out CachedChokePointData cached) &&
                 Find.TickManager.TicksGame < cached.ValidUntilTick)
             {
-#if DEBUG
-                CacheHits++;
-#endif
                 return cached.IsChokePoint;
             }
-
-#if DEBUG
-            CacheMisses++;
-#endif
 
             bool result = CalculateIsChokePoint(room);
 
@@ -66,13 +55,6 @@ namespace Do_Not_Disturb
 
             return result;
         }
-
-#if DEBUG
-        public static void LogCacheStats()
-        {
-            Log.Message($"Do Not Disturb :: Choke-point cache stats — hits: {CacheHits}, misses: {CacheMisses}, size: {Cache.Count}");
-        }
-#endif
 
         private static bool CalculateIsChokePoint(Room room)
         {

@@ -69,55 +69,44 @@ namespace Do_Not_Disturb
             Pawn pawn = AccessTools.FieldRefAccess<Pawn_JobTracker, Pawn>(__instance, "pawn");
             if (pawn == null)
             {
-                Log.Message($"[DND] EndCurrentJob postfix: pawn is null");
                 return;
             }
 
             DoNotDisturbManager manager = pawn.Map?.GetComponent<DoNotDisturbManager>();
             if (manager == null)
             {
-                Log.Message($"[DND] EndCurrentJob postfix: manager is null");
                 return;
             }
 
             if (!manager.IsPawnDndActive(pawn))
             {
-                Log.Message($"[DND] EndCurrentJob postfix for {pawn.LabelShort}: pawn is not DND-active, skipping unlock");
                 return;
             }
 
-            Room room = pawn.GetRoom();
-            Log.Message($"[DND] EndCurrentJob postfix for DND-active pawn {pawn.LabelShort}, room={room?.Role.label ?? "NULL"}");
+#if DEBUG
+            Log.Message($"[DND] EndCurrentJob postfix for DND-active pawn {pawn.LabelShort}");
+#endif
             
+            Room room = pawn.GetRoom();
             if (room != null)
             {
-                Log.Message($"[DND] Unlocking doors for {pawn.LabelShort} (job ended, was DND-active)");
                 DoNotDisturbUtility.SetRoomDoors(room, forbid: false, pawn.Map);
                 manager.PawnEndedDnd(pawn);
-                Log.Message($"[DND] Doors unlocked on job end");
             }
         }
 
         private static void JobDriver_LayDown_MakeNewToils_Postfix(JobDriver_LayDown __instance, ref IEnumerable<Toil> __result)
         {
-            Log.Message($"[DND] JobDriver_LayDown.MakeNewToils postfix called for {__instance.pawn.LabelShort}");
-            
             List<Toil> toils = new List<Toil>(__result);
-            Log.Message($"[DND] LayDown has {toils.Count} toils before modification");
             
             if (toils.Count >= 2)
             {
-                Log.Message($"[DND] Inserting LockRoomDoors toil at index 2");
                 toils.Insert(2, Toils_DoNotDisturb.LockRoomDoors());
             }
             else
             {
                 Log.Warning($"[DND] LayDown toils count < 2, cannot insert lock toil at index 2");
             }
-            
-            Log.Message($"[DND] Adding UnlockRoomDoors toil at end");
-            toils.Add(Toils_DoNotDisturb.UnlockRoomDoors());
-            Log.Message($"[DND] LayDown now has {toils.Count} toils after modification");
             
             __result = toils;
         }
@@ -129,7 +118,6 @@ namespace Do_Not_Disturb
             {
                 toils.Insert(2, Toils_DoNotDisturb.LockRoomDoors());
             }
-            toils.Add(Toils_DoNotDisturb.UnlockRoomDoors());
             __result = toils;
         }
 
@@ -140,19 +128,7 @@ namespace Do_Not_Disturb
             {
                 toils.Insert(1, Toils_DoNotDisturb.LockRoomDoors());
             }
-            toils.Add(Toils_DoNotDisturb.UnlockRoomDoors());
             __result = toils;
-        }
-
-        private static void JobDriver_TendPatient_MakeNewToils_Postfix(JobDriver __instance, ref IEnumerable<Toil> __result)
-        {
-            Pawn patient = __instance.job?.GetTarget(TargetIndex.A).Thing as Pawn;
-            if (patient != null)
-            {
-                List<Toil> toils = new List<Toil>(__result);
-                toils.Insert(0, Toils_DoNotDisturb.UnlockDoorsForMedicalTreatment(patient));
-                __result = toils;
-            }
         }
 
         static HarmonyPatches()
@@ -183,7 +159,6 @@ namespace Do_Not_Disturb
                 MethodInfo endCurrentJob = AccessTools.Method(typeof(Pawn_JobTracker), "EndCurrentJob");
                 if (endCurrentJob != null)
                 {
-                    Log.Message("[DND] Patching Pawn_JobTracker.EndCurrentJob");
                     harmony.Patch(endCurrentJob,
                         prefix: null,
                         postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.Pawn_JobTracker_EndCurrentJob_Postfix)));
@@ -215,18 +190,6 @@ namespace Do_Not_Disturb
                     harmony.Patch(relaxAloneMakeNewToils,
                         prefix: null,
                         postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.JobDriver_RelaxAlone_MakeNewToils_Postfix)));
-                }
-
-                Type jobDriverTendPatient = AccessTools.TypeByName("RimWorld.JobDriver_TendPatient");
-                if (jobDriverTendPatient != null)
-                {
-                    MethodInfo tendPatientMakeNewToils = AccessTools.Method(jobDriverTendPatient, "MakeNewToils");
-                    if (tendPatientMakeNewToils != null)
-                    {
-                        harmony.Patch(tendPatientMakeNewToils,
-                            prefix: null,
-                            postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.JobDriver_TendPatient_MakeNewToils_Postfix)));
-                    }
                 }
             }
             catch (Exception ex)

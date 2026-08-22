@@ -10,68 +10,90 @@ namespace Do_Not_Disturb
     {
         public static bool ShouldLockRoom(Room room, Pawn pawn)
         {
+#if DEBUG
             Log.Message($"[DND] ShouldLockRoom check: room={room?.Role.label ?? "NULL"}, pawn={pawn.LabelShort}");
+#endif
             
             if (room == null || pawn == null)
             {
-                Log.Message($"[DND] Room or pawn is null");
                 return false;
             }
 
             if (!room.Owners.Any())
             {
-                Log.Message($"[DND] Room has no owners");
                 return false;
             }
 
             Pawn owner = room.Owners.FirstOrDefault();
             if (owner != pawn)
             {
-                Log.Message($"[DND] Pawn {pawn.LabelShort} is not the room owner {owner.LabelShort}");
                 return false;
             }
 
             if (ChokePointDetector.IsChokePoint(room))
             {
-                Log.Message($"[DND] Room is a choke point, will not lock");
                 return false;
+            }
+
+            IEnumerable<Pawn> containedPawns = room.ContainedThings<Pawn>();
+            if (containedPawns != null)
+            {
+                foreach (Pawn otherPawn in containedPawns)
+                {
+                    if (otherPawn != null && !otherPawn.Dead && 
+                        otherPawn.Faction == Faction.OfPlayer && 
+                        !room.Owners.Contains(otherPawn))
+                    {
+#if DEBUG
+                        Log.Message($"[DND] Non-owner colonist {otherPawn.LabelShort} in room → NO LOCK");
+#endif
+                        return false;
+                    }
+                }
             }
 
             Job job = pawn.CurJob;
             if (job == null)
             {
-                Log.Message($"[DND] Pawn has no current job");
                 return false;
             }
 
+#if DEBUG
             Log.Message($"[DND] Pawn job: {job.def.defName}");
+#endif
             
             if (Settings.KeepLockedForLovin && job.def == JobDefOf.Lovin)
             {
+#if DEBUG
                 Log.Message($"[DND] Job is Lovin and KeepLockedForLovin=true → LOCK");
+#endif
                 return true;
             }
 
             if (Settings.KeepLockedForSoloRelaxation && job.def.driverClass == typeof(JobDriver_RelaxAlone))
             {
+#if DEBUG
                 Log.Message($"[DND] Job is RelaxAlone and KeepLockedForSoloRelaxation=true → LOCK");
+#endif
                 return true;
             }
 
             if (job.def == JobDefOf.LayDown)
             {
-                // Check if medical unlock conditions override lock
                 if (ShouldUnlockForMedical(room, pawn))
                 {
+#if DEBUG
                     Log.Message($"[DND] Job is LayDown but medical unlock conditions met → NO LOCK");
+#endif
                     return false;
                 }
 
+#if DEBUG
                 Log.Message($"[DND] Job is LayDown (sleeping/resting) → LOCK");
+#endif
                 return true;
             }
 
-            Log.Message($"[DND] No lock conditions met → NO LOCK");
             return false;
         }
 
@@ -184,29 +206,15 @@ namespace Do_Not_Disturb
 
         private static bool AdjacentRoomBlocksLock(Region doorRegion, Room currentRoom)
         {
-            // When current room wants to lock:
-            // - If adjacent room is isolated (dead-end with no outside access), it must also want lock
-            // - If adjacent room has outside access, it's free to do what it wants
-            
-            Queue<Region> queue = new Queue<Region>();
-            HashSet<Region> visited = new HashSet<Region>();
-            queue.Enqueue(doorRegion);
-            visited.Add(doorRegion);
-
-            while (queue.Count > 0)
+            foreach ((Room regionRoom, Region region) in FindAdjacentRooms(doorRegion, currentRoom))
             {
-                Region region = queue.Dequeue();
-                Room regionRoom = region.Room;
-
                 if (regionRoom != null && regionRoom != currentRoom && regionRoom.ProperRoom)
                 {
-                    // Skip rooms with outside access (they can always access outside)
                     if (HasOutsideAccess(regionRoom))
                     {
                         continue;
                     }
 
-                    // Check if this isolated adjacent room wants to lock
                     bool adjacentWantsLock = false;
                     foreach (Pawn pawn in regionRoom.Owners)
                     {
@@ -217,14 +225,27 @@ namespace Do_Not_Disturb
                         }
                     }
 
-                    // If isolated room doesn't want lock → block our lock
                     if (!adjacentWantsLock)
                     {
                         return true;
                     }
                 }
+            }
 
-                // Continue BFS
+            return false;
+        }
+
+        private static IEnumerable<(Room, Region)> FindAdjacentRooms(Region doorRegion, Room currentRoom)
+        {
+            Queue<Region> queue = new Queue<Region>();
+            HashSet<Region> visited = new HashSet<Region>();
+            queue.Enqueue(doorRegion);
+            visited.Add(doorRegion);
+
+            while (queue.Count > 0)
+            {
+                Region region = queue.Dequeue();
+                yield return (region.Room, region);
                 foreach (Region neighbor in region.Neighbors)
                 {
                     if (!visited.Contains(neighbor) && neighbor.Room != currentRoom)
@@ -234,13 +255,10 @@ namespace Do_Not_Disturb
                     }
                 }
             }
-
-            return false;
         }
 
         private static bool HasOutsideAccess(Room room)
         {
-            // Check if room has direct access to outside
             if (room == null || room.Regions == null)
             {
                 return false;
@@ -248,7 +266,7 @@ namespace Do_Not_Disturb
 
             foreach (Region region in room.Regions)
             {
-                if (region.door == null)  // Open region without door = outside access
+                if (region != null && region.door == null)
                 {
                     return true;
                 }
@@ -259,36 +277,16 @@ namespace Do_Not_Disturb
 
         private static bool AdjacentRoomWantedLock(Region doorRegion, Room currentRoom)
         {
-            // When unlocking: check if adjacent room currently wants lock
-            // If so, don't unlock this door (respect their lock preference)
-            
-            Queue<Region> queue = new Queue<Region>();
-            HashSet<Region> visited = new HashSet<Region>();
-            queue.Enqueue(doorRegion);
-            visited.Add(doorRegion);
-
-            while (queue.Count > 0)
+            foreach ((Room regionRoom, Region region) in FindAdjacentRooms(doorRegion, currentRoom))
             {
-                Region region = queue.Dequeue();
-                Room regionRoom = region.Room;
-
                 if (regionRoom != null && regionRoom != currentRoom && regionRoom.ProperRoom)
                 {
                     foreach (Pawn pawn in regionRoom.Owners)
                     {
                         if (pawn != null && ShouldLockRoom(regionRoom, pawn))
                         {
-                            return true;  // Adjacent room wants lock
+                            return true;
                         }
-                    }
-                }
-
-                foreach (Region neighbor in region.Neighbors)
-                {
-                    if (!visited.Contains(neighbor) && neighbor.Room != currentRoom)
-                    {
-                        visited.Add(neighbor);
-                        queue.Enqueue(neighbor);
                     }
                 }
             }
