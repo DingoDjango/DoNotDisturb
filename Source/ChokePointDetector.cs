@@ -18,7 +18,7 @@ namespace Do_Not_Disturb
 #if DEBUG
             if (Cache.ContainsKey(room))
             {
-                Log.Message($"Do Not Disturb :: Choke-point cache invalidated for {room.Role.label} #{room.ID}");
+                HarmonyPatches.DND_Log($"Choke-point cache invalidated", new { Role = room.Role.label, RoomId = room.ID });
             }
 #endif
             Cache.Remove(room);
@@ -27,7 +27,7 @@ namespace Do_Not_Disturb
         public static void ClearCache()
         {
 #if DEBUG
-            Log.Message($"Do Not Disturb :: Choke-point cache cleared (had {Cache.Count} entries)");
+            HarmonyPatches.DND_Log($"Choke-point cache cleared", new { Entries = Cache.Count });
 #endif
             Cache.Clear();
         }

@@ -11,7 +11,7 @@ namespace Do_Not_Disturb
         public static bool ShouldLockRoom(Room room, Pawn pawn)
         {
 #if DEBUG
-            Log.Message($"[DND] ShouldLockRoom check: room={room?.Role.label ?? "NULL"}, pawn={pawn.LabelShort}");
+            HarmonyPatches.DND_Log($"Should lock room check", new { Room = room?.Role.label ?? "NULL", Pawn = pawn.LabelShort });
 #endif
             
             if (room == null || pawn == null)
@@ -58,43 +58,17 @@ namespace Do_Not_Disturb
                 return false;
             }
 
-#if DEBUG
-            Log.Message($"[DND] Pawn job: {job.def.defName}");
-#endif
-            
-            if (Settings.KeepLockedForLovin && job.def == JobDefOf.Lovin)
+            JobDriver driver = pawn.jobs?.curDriver;
+            if (driver == null)
             {
-#if DEBUG
-                Log.Message($"[DND] Job is Lovin and KeepLockedForLovin=true → LOCK");
-#endif
-                return true;
+                return false;
             }
 
-            if (Settings.KeepLockedForSoloRelaxation && job.def.driverClass == typeof(JobDriver_RelaxAlone))
-            {
 #if DEBUG
-                Log.Message($"[DND] Job is RelaxAlone and KeepLockedForSoloRelaxation=true → LOCK");
+            HarmonyPatches.DND_Log($"Pawn job check", new { Job = job.def.defName, Driver = driver.GetType().Name });
 #endif
-                return true;
-            }
 
-            if (job.def == JobDefOf.LayDown)
-            {
-                if (ShouldUnlockForMedical(room, pawn))
-                {
-#if DEBUG
-                    Log.Message($"[DND] Job is LayDown but medical unlock conditions met → NO LOCK");
-#endif
-                    return false;
-                }
-
-#if DEBUG
-                Log.Message($"[DND] Job is LayDown (sleeping/resting) → LOCK");
-#endif
-                return true;
-            }
-
-            return false;
+            return Settings.ShouldLockFor(driver, room, pawn);
         }
 
         public static bool ShouldUnlockForMedical(Room room, Pawn patient)

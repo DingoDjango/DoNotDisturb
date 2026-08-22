@@ -12,29 +12,45 @@ namespace Do_Not_Disturb
     [StaticConstructorOnStartup]
     public static class HarmonyPatches
     {
+        internal static void DND_Log(string message, object details = null)
+        {
+            if (details != null)
+            {
+                message = $"{message}: {details}";
+            }
+
+            Log.Message("[DND] " + message);
+        }
+        
+        private static void Pawn_DraftController_Drafted_Postfix(Pawn_DraftController __instance)
+        {
+            if (__instance.Drafted && __instance.pawn?.GetRoom() is Room room)
+            {
+                DoNotDisturbUtility.SetRoomDoors(room, forbid: false, __instance.pawn.Map);
+                HarmonyPatches.DND_Log($"Unlocked doors for drafted pawn", new { Pawn = __instance.pawn.Name });
+            }
+        }
+
         private static void Room_Notify_RoomShapeChanged_Postfix(Room __instance)
         {
-#if DEBUG
-            Log.Message($"Do Not Disturb :: Room shape changed → invalidating choke-point cache for {__instance.Role.label} #{__instance.ID}");
-#endif
+            HarmonyPatches.DND_Log($"Room shape changed", new { Role = __instance.Role.label, RoomId = __instance.ID });
             ChokePointDetector.InvalidateCache(__instance);
         }
 
-        private static void Pawn_DraftController_Drafted_Postfix(Pawn_DraftController __instance)
+        private static void JobDriver_MakeNewToils_Postfix(JobDriver __instance)
         {
-            Pawn pawn = __instance.pawn;
-
-            if (pawn.Drafted)
+            Job job = __instance.pawn.CurJob;
+            if (job == null)
             {
-                Room room = pawn.GetRoom();
-                if (room != null)
-                {
-                    DoNotDisturbUtility.SetRoomDoors(room, forbid: false, pawn.Map);
-                }
+                return;
+            }
 
-#if DEBUG
-                Log.Message($"Do Not Disturb :: Unlocked doors for drafted pawn {pawn.Name}");
-#endif
+            Room room = __instance.pawn.GetRoom();
+            if (room != null)
+            {
+                DoNotDisturbManager manager = __instance.pawn.Map?.GetComponent<DoNotDisturbManager>();
+                manager.SyncRoomDoorsForJob(__instance, room);
+                HarmonyPatches.DND_Log($"Sync lock", new { Pawn = __instance.pawn.Name, Room = room.ID });
             }
         }
 
@@ -136,42 +152,6 @@ namespace Do_Not_Disturb
             manager.ClearDoorFromAllPawns(door);
         }
 
-        private static void JobDriver_LayDown_MakeNewToils_Postfix(JobDriver_LayDown __instance, ref IEnumerable<Toil> __result)
-        {
-            List<Toil> toils = new List<Toil>(__result);
-            
-            if (toils.Count >= 2)
-            {
-                toils.Insert(2, Toils_DoNotDisturb.LockRoomDoors());
-            }
-            else
-            {
-                Log.Warning($"[DND] LayDown toils count < 2, cannot insert lock toil at index 2");
-            }
-            
-            __result = toils;
-        }
-
-        private static void JobDriver_Lovin_MakeNewToils_Postfix(JobDriver_Lovin __instance, ref IEnumerable<Toil> __result)
-        {
-            List<Toil> toils = new List<Toil>(__result);
-            if (toils.Count >= 2)
-            {
-                toils.Insert(2, Toils_DoNotDisturb.LockRoomDoors());
-            }
-            __result = toils;
-        }
-
-        private static void JobDriver_RelaxAlone_MakeNewToils_Postfix(JobDriver_RelaxAlone __instance, ref IEnumerable<Toil> __result)
-        {
-            List<Toil> toils = new List<Toil>(__result);
-            if (toils.Count >= 1)
-            {
-                toils.Insert(1, Toils_DoNotDisturb.LockRoomDoors());
-            }
-            __result = toils;
-        }
-
         static HarmonyPatches()
         {
             try
@@ -197,6 +177,14 @@ namespace Do_Not_Disturb
                     prefix: null,
                     postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.Building_Door_GetGizmos_Postfix)));
 
+                MethodInfo makeNewToils = AccessTools.Method(typeof(JobDriver), "MakeNewToils");
+                if (makeNewToils != null)
+                {
+                    harmony.Patch(makeNewToils,
+                        prefix: null,
+                        postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.JobDriver_MakeNewToils_Postfix)));
+                }
+
                 MethodInfo endCurrentJob = AccessTools.Method(typeof(Pawn_JobTracker), "EndCurrentJob");
                 if (endCurrentJob != null)
                 {
@@ -207,30 +195,6 @@ namespace Do_Not_Disturb
                 else
                 {
                     Log.Warning("[DND] Could not find Pawn_JobTracker.EndCurrentJob method");
-                }
-
-                MethodInfo layDownMakeNewToils = AccessTools.Method(typeof(JobDriver_LayDown), "MakeNewToils");
-                if (layDownMakeNewToils != null)
-                {
-                    harmony.Patch(layDownMakeNewToils,
-                        prefix: null,
-                        postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.JobDriver_LayDown_MakeNewToils_Postfix)));
-                }
-
-                MethodInfo lovinMakeNewToils = AccessTools.Method(typeof(JobDriver_Lovin), "MakeNewToils");
-                if (lovinMakeNewToils != null)
-                {
-                    harmony.Patch(lovinMakeNewToils,
-                        prefix: null,
-                        postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.JobDriver_Lovin_MakeNewToils_Postfix)));
-                }
-
-                MethodInfo relaxAloneMakeNewToils = AccessTools.Method(typeof(JobDriver_RelaxAlone), "MakeNewToils");
-                if (relaxAloneMakeNewToils != null)
-                {
-                    harmony.Patch(relaxAloneMakeNewToils,
-                        prefix: null,
-                        postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.JobDriver_RelaxAlone_MakeNewToils_Postfix)));
                 }
 
                 MethodInfo forbiddableSetter = AccessTools.PropertySetter(typeof(CompForbiddable), nameof(CompForbiddable.Forbidden));

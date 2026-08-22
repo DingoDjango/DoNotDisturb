@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using RimWorld;
 using Verse;
+using Verse.AI;
 
 namespace Do_Not_Disturb
 {
@@ -39,26 +40,16 @@ namespace Do_Not_Disturb
             }
         }
 
-        public void PawnStartedDnd(Pawn pawn, Room room, Dictionary<Building_Door, bool> doorsWithOriginalState = null)
+        public void SyncRoomDoorsForJob(JobDriver driver, Room room)
         {
-            if (pawn == null)
+            if (driver == null || room == null)
             {
                 return;
             }
 
-            if (room != null)
-            {
-                pawnsDndRooms[pawn.thingIDNumber] = room;
-            }
-
-            if (doorsWithOriginalState != null && doorsWithOriginalState.Count > 0)
-            {
-                pawnsDndDoors[pawn.thingIDNumber] = doorsWithOriginalState;
-            }
-#if DEBUG
-            string jobName = pawn.CurJob?.def.defName ?? "NULL";
-            Log.Message($"[DND] Registered pawn {pawn.LabelShort} as DND active (job: {jobName}, doors tracked: {doorsWithOriginalState?.Count ?? 0})");
-#endif
+            bool lockRoom = DoNotDisturbUtility.ShouldLockRoom(room, driver.pawn);
+            DoNotDisturbUtility.SetRoomDoors(room, forbid: lockRoom, driver.pawn.Map);
+            HarmonyPatches.DND_Log($"Sync triggered", new { LockState = lockRoom, RoomId = room.ID });
         }
 
         public void PawnEndedDnd(Pawn pawn)
@@ -76,7 +67,7 @@ namespace Do_Not_Disturb
 
         public bool IsPawnDndActive(Pawn pawn)
         {
-            return pawn != null && (pawnsDndRooms.ContainsKey(pawn.thingIDNumber) || pawnsDndDoors.ContainsKey(pawn.thingIDNumber));
+            return pawn?.IsFreeColonist == true && (pawnsDndRooms.ContainsKey(pawn.thingIDNumber) || pawnsDndDoors.ContainsKey(pawn.thingIDNumber));
         }
 
         public Room GetDndRoom(Pawn pawn)
