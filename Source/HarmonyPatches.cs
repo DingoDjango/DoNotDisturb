@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using RimWorld;
@@ -84,15 +85,54 @@ namespace Do_Not_Disturb
             }
 
 #if DEBUG
-            Log.Message($"[DND] EndCurrentJob postfix for DND-active pawn {pawn.LabelShort}");
+            Log.Message($"[DND] EndCurrentJob postfix for DND-active pawn {pawn.LabelShort} (ended job: {pawn.CurJob?.def.defName ?? "NULL"})");
 #endif
             
             Room room = manager.GetDndRoom(pawn);
-            if (room != null)
+            List<Building_Door> trackedDoors = manager.GetDndDoors(pawn).ToList();
+
+            if (room != null || trackedDoors.Count > 0)
             {
-                DoNotDisturbUtility.SetRoomDoors(room, forbid: false, pawn.Map);
+                foreach (Building_Door door in trackedDoors)
+                {
+                    if (door != null && door.Spawned)
+                    {
+                        CompForbiddable comp = door.GetComp<CompForbiddable>();
+                        if (comp != null)
+                        {
+                            bool originalState = manager.GetOriginalDoorState(pawn, door);
+                            comp.Forbidden = originalState;
+#if DEBUG
+                            Log.Message($"[DND] Restored door {door.Label} to original state: forbidden={originalState} (pawn: {pawn.LabelShort})");
+#endif
+                        }
+                    }
+                }
+
+                if (room != null)
+                {
+                    DoNotDisturbUtility.SetRoomDoors(room, forbid: false, pawn.Map);
+                }
+
                 manager.PawnEndedDnd(pawn);
             }
+        }
+
+        private static void CompForbiddable_Forbidden_Postfix(CompForbiddable __instance)
+        {
+            Building_Door door = __instance.parent as Building_Door;
+            if (door == null || door.Faction != Faction.OfPlayer)
+            {
+                return;
+            }
+
+            DoNotDisturbManager manager = door.Map?.GetComponent<DoNotDisturbManager>();
+            if (manager == null)
+            {
+                return;
+            }
+
+            manager.ClearDoorFromAllPawns(door);
         }
 
         private static void JobDriver_LayDown_MakeNewToils_Postfix(JobDriver_LayDown __instance, ref IEnumerable<Toil> __result)
@@ -190,6 +230,14 @@ namespace Do_Not_Disturb
                     harmony.Patch(relaxAloneMakeNewToils,
                         prefix: null,
                         postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.JobDriver_RelaxAlone_MakeNewToils_Postfix)));
+                }
+
+                MethodInfo forbiddableSetter = AccessTools.PropertySetter(typeof(CompForbiddable), nameof(CompForbiddable.Forbidden));
+                if (forbiddableSetter != null)
+                {
+                    harmony.Patch(forbiddableSetter,
+                        prefix: null,
+                        postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(HarmonyPatches.CompForbiddable_Forbidden_Postfix)));
                 }
             }
             catch (Exception ex)

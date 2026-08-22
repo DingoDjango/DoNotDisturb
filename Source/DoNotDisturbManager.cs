@@ -10,6 +10,7 @@ namespace Do_Not_Disturb
         private List<Building_Door> scribeDisabledDoors;
         private readonly Dictionary<Building_Door, bool> doorDisabledDict = new Dictionary<Building_Door, bool>();
         private readonly Dictionary<int, Room> pawnsDndRooms = new Dictionary<int, Room>();
+        private readonly Dictionary<int, Dictionary<Building_Door, bool>> pawnsDndDoors = new Dictionary<int, Dictionary<Building_Door, bool>>();
 
         public DoNotDisturbManager(Map map) : base(map)
         {
@@ -38,31 +39,44 @@ namespace Do_Not_Disturb
             }
         }
 
-        public void PawnStartedDnd(Pawn pawn, Room room)
+        public void PawnStartedDnd(Pawn pawn, Room room, Dictionary<Building_Door, bool> doorsWithOriginalState = null)
         {
-            if (pawn != null && room != null)
+            if (pawn == null)
+            {
+                return;
+            }
+
+            if (room != null)
             {
                 pawnsDndRooms[pawn.thingIDNumber] = room;
-#if DEBUG
-                Log.Message($"[DND] Registered pawn {pawn.LabelShort} as DND active");
-#endif
             }
+
+            if (doorsWithOriginalState != null && doorsWithOriginalState.Count > 0)
+            {
+                pawnsDndDoors[pawn.thingIDNumber] = doorsWithOriginalState;
+            }
+#if DEBUG
+            string jobName = pawn.CurJob?.def.defName ?? "NULL";
+            Log.Message($"[DND] Registered pawn {pawn.LabelShort} as DND active (job: {jobName}, doors tracked: {doorsWithOriginalState?.Count ?? 0})");
+#endif
         }
 
         public void PawnEndedDnd(Pawn pawn)
         {
-            if (pawn != null)
+            if (pawn == null)
             {
-                bool wasActive = pawnsDndRooms.Remove(pawn.thingIDNumber);
-#if DEBUG
-                Log.Message($"[DND] Unregistered pawn {pawn.LabelShort} from DND (was active: {wasActive})");
-#endif
+                return;
             }
+
+            bool wasActive = pawnsDndRooms.Remove(pawn.thingIDNumber) || pawnsDndDoors.Remove(pawn.thingIDNumber);
+#if DEBUG
+            Log.Message($"[DND] Unregistered pawn {pawn.LabelShort} from DND (was active: {wasActive})");
+#endif
         }
 
         public bool IsPawnDndActive(Pawn pawn)
         {
-            return pawn != null && pawnsDndRooms.ContainsKey(pawn.thingIDNumber);
+            return pawn != null && (pawnsDndRooms.ContainsKey(pawn.thingIDNumber) || pawnsDndDoors.ContainsKey(pawn.thingIDNumber));
         }
 
         public Room GetDndRoom(Pawn pawn)
@@ -73,6 +87,45 @@ namespace Do_Not_Disturb
             }
 
             return null;
+        }
+
+        public IEnumerable<Building_Door> GetDndDoors(Pawn pawn)
+        {
+            if (pawn != null && pawnsDndDoors.TryGetValue(pawn.thingIDNumber, out Dictionary<Building_Door, bool> doors))
+            {
+                return doors.Keys;
+            }
+
+            return Enumerable.Empty<Building_Door>();
+        }
+
+        public void ClearDoorFromAllPawns(Building_Door door)
+        {
+            if (door == null)
+            {
+                return;
+            }
+
+            foreach (Dictionary<Building_Door, bool> doorDict in pawnsDndDoors.Values)
+            {
+                doorDict.Remove(door);
+            }
+#if DEBUG
+            Log.Message($"[DND] Cleared door {door.Label} from all tracked pawns due to player interaction");
+#endif
+        }
+
+        public bool GetOriginalDoorState(Pawn pawn, Building_Door door)
+        {
+            if (pawn != null && door != null && pawnsDndDoors.TryGetValue(pawn.thingIDNumber, out Dictionary<Building_Door, bool> doors))
+            {
+                if (doors.TryGetValue(door, out bool originalState))
+                {
+                    return originalState;
+                }
+            }
+
+            return false;
         }
 
         public override void ExposeData()

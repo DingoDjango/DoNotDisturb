@@ -148,11 +148,13 @@ namespace Do_Not_Disturb
             return false;
         }
 
-        public static void SetRoomDoors(Room room, bool forbid, Map map)
+        public static Dictionary<Building_Door, bool> SetRoomDoors(Room room, bool forbid, Map map)
         {
+            Dictionary<Building_Door, bool> doorsWithOriginalState = new Dictionary<Building_Door, bool>();
+
             if (room == null || map == null)
             {
-                return;
+                return doorsWithOriginalState;
             }
 
             DoNotDisturbManager manager = map.GetComponent<DoNotDisturbManager>();
@@ -196,12 +198,16 @@ namespace Do_Not_Disturb
 #endif
                     }
 
+                    bool originalState = door.IsForbidden(Faction.OfPlayer);
                     door.SetForbidden(shouldForbid, warnOnFail: false);
+                    doorsWithOriginalState[door] = originalState;
 #if DEBUG
-                    Log.Message($"Do Not Disturb :: Door {door.Label} set forbidden={shouldForbid}");
+                    Log.Message($"Do Not Disturb :: Door {door.Label} set forbidden={shouldForbid} (was {originalState})");
 #endif
                 }
             }
+
+            return doorsWithOriginalState;
         }
 
         private static bool AdjacentRoomBlocksLock(Region doorRegion, Room currentRoom)
