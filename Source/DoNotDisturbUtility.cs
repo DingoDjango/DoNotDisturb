@@ -35,7 +35,7 @@ namespace Do_Not_Disturb
                 return false;
             }
 
-            IEnumerable<Pawn> containedPawns = room.ContainedThings<Pawn>();
+            List<Pawn> containedPawns = room.ContainedThings<Pawn>().ToList();
             if (containedPawns != null)
             {
                 foreach (Pawn otherPawn in containedPawns)
