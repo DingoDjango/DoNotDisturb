@@ -41,7 +41,7 @@ namespace Do_Not_Disturb
                 foreach (Pawn otherPawn in containedPawns)
                 {
                     if (otherPawn != null && !otherPawn.Dead && 
-                        otherPawn.Faction == Faction.OfPlayer && 
+                        otherPawn.IsFreeColonist && 
                         !room.Owners.Contains(otherPawn))
                     {
 #if DEBUG

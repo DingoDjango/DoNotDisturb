@@ -88,6 +88,7 @@ namespace Do_Not_Disturb
             Log.Message($"[DND] EndCurrentJob postfix for DND-active pawn {pawn.LabelShort} (ended job: {pawn.CurJob?.def.defName ?? "NULL"})");
 #endif
             
+            // Unlock doors synchronously here, not deferred to map component
             Room room = manager.GetDndRoom(pawn);
             List<Building_Door> trackedDoors = manager.GetDndDoors(pawn).ToList();
 
