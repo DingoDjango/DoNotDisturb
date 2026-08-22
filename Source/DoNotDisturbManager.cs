@@ -40,6 +40,24 @@ namespace Do_Not_Disturb
             }
         }
 
+        public void PawnStartedDnd(Pawn pawn, Room room, Dictionary<Building_Door, bool> doorsWithOriginalState = null)
+        {
+            if (pawn == null)
+            {
+                return;
+            }
+
+            if (room != null)
+            {
+                pawnsDndRooms[pawn.thingIDNumber] = room;
+            }
+
+            if (doorsWithOriginalState != null && doorsWithOriginalState.Count > 0)
+            {
+                pawnsDndDoors[pawn.thingIDNumber] = doorsWithOriginalState;
+            }
+        }
+
         public void SyncRoomDoorsForJob(JobDriver driver, Room room)
         {
             if (driver == null || room == null)

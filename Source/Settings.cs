@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using RimWorld;
 using UnityEngine;
 using Verse;
 using Verse.AI;
@@ -15,7 +16,7 @@ namespace Do_Not_Disturb
         public static bool KeepLockedForSoloRelaxation = true;
         public static bool KeepLockedForLovin = false;
 
-        private static readonly Dictionary<Type, Action<Room, Pawn>> LockActions = new Dictionary<Type, Action<Room, Pawn>>
+        private static readonly Dictionary<Type, Func<Room, Pawn, bool>> LockActions = new Dictionary<Type, Func<Room, Pawn, bool>>
         {
             { typeof(JobDriver_LayDown), LockRoomForSleeping },
             { typeof(JobDriver_Lovin), LockRoomForLovin },
@@ -29,9 +30,9 @@ namespace Do_Not_Disturb
                 return false;
             }
 
-            if (LockActions.TryGetValue(driver.GetType(), out Action<Room, Pawn> action))
+            if (LockActions.TryGetValue(driver.GetType(), out Func<Room, Pawn, bool> func))
             {
-                return action(room, pawn);
+                return func(room, pawn);
             }
 
             return false;
@@ -39,7 +40,7 @@ namespace Do_Not_Disturb
 
         private static bool LockRoomForSleeping(Room room, Pawn pawn)
         {
-            return DoNotDisturbUtility.ShouldUnlockForMedical(room, pawn) == false;
+            return !DoNotDisturbUtility.ShouldUnlockForMedical(room, pawn);
         }
 
         private static bool LockRoomForLovin(Room room, Pawn pawn)
